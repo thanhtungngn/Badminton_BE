@@ -1,4 +1,5 @@
 using System;
+using Badminton_BE.Models;
 
 namespace Badminton_BE.DTOs
 {
@@ -9,6 +10,9 @@ namespace Badminton_BE.DTOs
         public string? Description { get; set; }
         public DateTime StartTime { get; set; }
         public DateTime EndTime { get; set; }
-        public string? Location { get; set; }
+        public string Address { get; set; } = string.Empty;
+        public SessionStatus Status { get; set; }
+        public int NumberOfCourts { get; set; }
+        public int? MaxPlayerPerCourt { get; set; }
     }
 }

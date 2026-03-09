@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -24,8 +25,13 @@ namespace Badminton_BE.Services
                 Description = dto.Description,
                 StartTime = dto.StartTime,
                 EndTime = dto.EndTime,
-                Location = dto.Location
+                Address = dto.Address,
+                Status = dto.Status,
+                NumberOfCourts = dto.NumberOfCourts,
+                MaxPlayerPerCourt = dto.MaxPlayerPerCourt
             };
+            // set created date explicitly
+            s.CreatedDate = DateTime.UtcNow;
 
             await _repo.AddAsync(s);
             await _repo.SaveChangesAsync();
@@ -37,7 +43,10 @@ namespace Badminton_BE.Services
                 Description = s.Description,
                 StartTime = s.StartTime,
                 EndTime = s.EndTime,
-                Location = s.Location
+                Address = s.Address,
+                Status = s.Status,
+                NumberOfCourts = s.NumberOfCourts,
+                MaxPlayerPerCourt = s.MaxPlayerPerCourt
             };
         }
 
@@ -51,7 +60,10 @@ namespace Badminton_BE.Services
                 Description = s.Description,
                 StartTime = s.StartTime,
                 EndTime = s.EndTime,
-                Location = s.Location
+                Address = s.Address,
+                Status = s.Status,
+                NumberOfCourts = s.NumberOfCourts,
+                MaxPlayerPerCourt = s.MaxPlayerPerCourt
             });
         }
 
@@ -67,7 +79,10 @@ namespace Badminton_BE.Services
                 Description = s.Description,
                 StartTime = s.StartTime,
                 EndTime = s.EndTime,
-                Location = s.Location
+                Address = s.Address,
+                Status = s.Status,
+                NumberOfCourts = s.NumberOfCourts,
+                MaxPlayerPerCourt = s.MaxPlayerPerCourt
             };
         }
 
@@ -80,7 +95,13 @@ namespace Badminton_BE.Services
             existing.Description = dto.Description;
             existing.StartTime = dto.StartTime;
             existing.EndTime = dto.EndTime;
-            existing.Location = dto.Location;
+            existing.Address = dto.Address;
+            existing.Status = dto.Status;
+            existing.NumberOfCourts = dto.NumberOfCourts;
+            existing.MaxPlayerPerCourt = dto.MaxPlayerPerCourt;
+
+            // set updated date
+            existing.UpdatedDate = DateTime.UtcNow;
 
             _repo.Update(existing);
             await _repo.SaveChangesAsync();

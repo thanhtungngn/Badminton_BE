@@ -20,6 +20,11 @@ namespace Badminton_BE.Data
             {
                 b.HasKey(s => s.Id);
                 b.Property(s => s.Title).IsRequired().HasMaxLength(200);
+                b.Property(s => s.Address).IsRequired();
+                b.Property(s => s.StartTime).IsRequired();
+                b.Property(s => s.NumberOfCourts).IsRequired();
+                // store enum as string in database
+                b.Property(s => s.Status).HasConversion<string>().IsRequired();
             });
         }
     }
