@@ -17,6 +17,7 @@ namespace Badminton_BE.Data
         public DbSet<Session> Sessions => Set<Session>();
         public DbSet<Member> Members => Set<Member>();
         public DbSet<Contact> Contacts => Set<Contact>();
+        public DbSet<SessionPlayer> SessionPlayers => Set<SessionPlayer>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -54,6 +55,24 @@ namespace Badminton_BE.Data
                 b.Property(c => c.ContactType).HasConversion<string>().IsRequired();
                 b.Property(c => c.ContactValue).IsRequired().HasMaxLength(500);
                 b.Property(c => c.IsPrimary).IsRequired();
+            });
+
+            modelBuilder.Entity<SessionPlayer>(b =>
+            {
+                b.HasKey(sp => sp.Id);
+                b.Property(sp => sp.SessionId).IsRequired();
+                b.Property(sp => sp.MemberId).IsRequired();
+                b.Property(sp => sp.Status).HasConversion<string>().IsRequired();
+
+                b.HasOne(sp => sp.Session)
+                    .WithMany(s => s.SessionPlayers)
+                    .HasForeignKey(sp => sp.SessionId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                b.HasOne(sp => sp.Member)
+                    .WithMany(m => m.SessionPlayers)
+                    .HasForeignKey(sp => sp.MemberId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
         }
 

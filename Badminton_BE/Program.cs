@@ -1,9 +1,11 @@
 using System.Reflection;
 using Microsoft.OpenApi;
+using Swashbuckle.AspNetCore.Annotations;
 using Microsoft.EntityFrameworkCore;
 using Badminton_BE.Data;
 using Badminton_BE.Repositories;
 using Badminton_BE.Services;
+using Pomelo.EntityFrameworkCore.MySql.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,12 +27,15 @@ else
         options.UseInMemoryDatabase("BadmintonDb"));
 }
 
-// Register repositories
+// register repositories and services for DI
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 builder.Services.AddScoped<ISessionRepository, SessionRepository>();
-builder.Services.AddScoped<ISessionService, SessionService>();
 builder.Services.AddScoped<IMemberRepository, MemberRepository>();
+builder.Services.AddScoped<ISessionPlayerRepository, SessionPlayerRepository>();
+
+builder.Services.AddScoped<ISessionService, SessionService>();
 builder.Services.AddScoped<IMemberService, MemberService>();
+builder.Services.AddScoped<ISessionPlayerService, SessionPlayerService>();
 // Learn more about configuring Swagger at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>

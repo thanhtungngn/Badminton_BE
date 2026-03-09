@@ -33,5 +33,6 @@ namespace Badminton_BE.Models
 
         // navigation
         public ICollection<Contact> Contacts { get; set; } = new List<Contact>();
+        public ICollection<SessionPlayer> SessionPlayers { get; set; } = new List<SessionPlayer>();
     }
 }

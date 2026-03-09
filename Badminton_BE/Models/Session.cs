@@ -23,5 +23,6 @@ namespace Badminton_BE.Models
         public SessionStatus Status { get; set; } = SessionStatus.Upcoming;
         public int NumberOfCourts { get; set; }
         public int? MaxPlayerPerCourt { get; set; }
+        public ICollection<SessionPlayer> SessionPlayers { get; set; } = new List<SessionPlayer>();
     }
 }
