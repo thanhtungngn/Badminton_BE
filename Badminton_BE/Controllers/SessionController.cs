@@ -1,6 +1,12 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Swashbuckle.AspNetCore.Annotations;
+using System.Threading.Tasks;
+using System.Linq;
+using System.Collections.Generic;
+using Badminton_BE.Repositories;
+using Badminton_BE.DTOs;
+using Badminton_BE.Models;
 
 namespace Badminton_BE.Controllers
 {
@@ -11,31 +17,65 @@ namespace Badminton_BE.Controllers
     [ApiController]
     public class SessionController : ControllerBase
     {
-        public SessionController()
+        private readonly ISessionRepository _repo;
+
+        public SessionController(ISessionRepository repo)
         {
+            _repo = repo;
         }
 
         /// <summary>
         /// Create a new session.
         /// </summary>
-        /// <returns>Confirmation message.</returns>
+        /// <returns>Created session.</returns>
         [HttpPost]
-        //[SwaggerOperation(Summary = "Create session", Description = "Creates a new session.")]
-        [SwaggerResponse(StatusCodes.Status200OK, "Session created successfully")]
-        public IActionResult CreateSession()
+        [SwaggerResponse(StatusCodes.Status201Created, "Session created successfully", typeof(SessionReadDto))]
+        public async Task<IActionResult> CreateSession([FromBody] SessionCreateDto dto)
         {
-            return Ok("Session created successfully");
+            var s = new Session
+            {
+                Title = dto.Title,
+                Description = dto.Description,
+                StartTime = dto.StartTime,
+                EndTime = dto.EndTime,
+                Location = dto.Location
+            };
+
+            await _repo.AddAsync(s);
+            await _repo.SaveChangesAsync();
+
+            var read = new SessionReadDto
+            {
+                Id = s.Id,
+                Title = s.Title,
+                Description = s.Description,
+                StartTime = s.StartTime,
+                EndTime = s.EndTime,
+                Location = s.Location
+            };
+
+            return CreatedAtAction(nameof(GetSessionById), new { id = read.Id }, read);
         }
 
         /// <summary>
         /// Get all sessions.
         /// </summary>
         [HttpGet]
-        //[SwaggerOperation(Summary = "List sessions", Description = "Returns a list of sessions.")]
-        [SwaggerResponse(StatusCodes.Status200OK, "A list of sessions")]
-        public IActionResult GetSessions()
+        [SwaggerResponse(StatusCodes.Status200OK, "A list of sessions", typeof(IEnumerable<SessionReadDto>))]
+        public async Task<IActionResult> GetSessions()
         {
-            return Ok();
+            var sessions = (await _repo.GetAllAsync())
+                .Select(s => new SessionReadDto
+                {
+                    Id = s.Id,
+                    Title = s.Title,
+                    Description = s.Description,
+                    StartTime = s.StartTime,
+                    EndTime = s.EndTime,
+                    Location = s.Location
+                });
+
+            return Ok(sessions);
         }
 
         /// <summary>
@@ -44,12 +84,24 @@ namespace Badminton_BE.Controllers
         /// <param name="id">Session identifier.</param>
         [HttpGet()]
         [Route("{id}")]
-        //[SwaggerOperation(Summary = "Get session by id", Description = "Returns a single session by id.")]
-        [SwaggerResponse(StatusCodes.Status200OK, "The session")]
+        [SwaggerResponse(StatusCodes.Status200OK, "The session", typeof(SessionReadDto))]
         [SwaggerResponse(StatusCodes.Status404NotFound, "Session not found")]
-        public IActionResult GetSessionById(int id)
+        public async Task<IActionResult> GetSessionById(int id)
         {
-            return Ok();
+            var s = await _repo.GetByIdAsync(id);
+            if (s == null) return NotFound();
+
+            var read = new SessionReadDto
+            {
+                Id = s.Id,
+                Title = s.Title,
+                Description = s.Description,
+                StartTime = s.StartTime,
+                EndTime = s.EndTime,
+                Location = s.Location
+            };
+
+            return Ok(read);
         }
 
         /// <summary>
@@ -57,12 +109,23 @@ namespace Badminton_BE.Controllers
         /// </summary>
         /// <param name="id">Session identifier.</param>
         [HttpPut("{id}")]
-        //[SwaggerOperation(Summary = "Update session", Description = "Updates the session with the given id.")]
-        [SwaggerResponse(StatusCodes.Status200OK, "Session updated")]
+        [SwaggerResponse(StatusCodes.Status204NoContent, "Session updated")]
         [SwaggerResponse(StatusCodes.Status404NotFound, "Session not found")]
-        public IActionResult UpdateSession(int id)
+        public async Task<IActionResult> UpdateSession(int id, [FromBody] SessionUpdateDto dto)
         {
-            return Ok();
+            var existing = await _repo.GetByIdAsync(id);
+            if (existing == null) return NotFound();
+
+            existing.Title = dto.Title;
+            existing.Description = dto.Description;
+            existing.StartTime = dto.StartTime;
+            existing.EndTime = dto.EndTime;
+            existing.Location = dto.Location;
+
+            _repo.Update(existing);
+            await _repo.SaveChangesAsync();
+
+            return NoContent();
         }
     }
 }
