@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using System.Linq;
 using System.Collections.Generic;
 using Badminton_BE.Repositories;
+using Badminton_BE.Services;
 using Badminton_BE.DTOs;
 using Badminton_BE.Models;
 
@@ -17,11 +18,11 @@ namespace Badminton_BE.Controllers
     [ApiController]
     public class SessionController : ControllerBase
     {
-        private readonly ISessionRepository _repo;
+        private readonly ISessionService _service;
 
-        public SessionController(ISessionRepository repo)
+        public SessionController(ISessionService service)
         {
-            _repo = repo;
+            _service = service;
         }
 
         /// <summary>
@@ -32,28 +33,7 @@ namespace Badminton_BE.Controllers
         [SwaggerResponse(StatusCodes.Status201Created, "Session created successfully", typeof(SessionReadDto))]
         public async Task<IActionResult> CreateSession([FromBody] SessionCreateDto dto)
         {
-            var s = new Session
-            {
-                Title = dto.Title,
-                Description = dto.Description,
-                StartTime = dto.StartTime,
-                EndTime = dto.EndTime,
-                Location = dto.Location
-            };
-
-            await _repo.AddAsync(s);
-            await _repo.SaveChangesAsync();
-
-            var read = new SessionReadDto
-            {
-                Id = s.Id,
-                Title = s.Title,
-                Description = s.Description,
-                StartTime = s.StartTime,
-                EndTime = s.EndTime,
-                Location = s.Location
-            };
-
+            var read = await _service.CreateSessionAsync(dto);
             return CreatedAtAction(nameof(GetSessionById), new { id = read.Id }, read);
         }
 
@@ -64,17 +44,7 @@ namespace Badminton_BE.Controllers
         [SwaggerResponse(StatusCodes.Status200OK, "A list of sessions", typeof(IEnumerable<SessionReadDto>))]
         public async Task<IActionResult> GetSessions()
         {
-            var sessions = (await _repo.GetAllAsync())
-                .Select(s => new SessionReadDto
-                {
-                    Id = s.Id,
-                    Title = s.Title,
-                    Description = s.Description,
-                    StartTime = s.StartTime,
-                    EndTime = s.EndTime,
-                    Location = s.Location
-                });
-
+            var sessions = await _service.GetSessionsAsync();
             return Ok(sessions);
         }
 
@@ -88,19 +58,8 @@ namespace Badminton_BE.Controllers
         [SwaggerResponse(StatusCodes.Status404NotFound, "Session not found")]
         public async Task<IActionResult> GetSessionById(int id)
         {
-            var s = await _repo.GetByIdAsync(id);
-            if (s == null) return NotFound();
-
-            var read = new SessionReadDto
-            {
-                Id = s.Id,
-                Title = s.Title,
-                Description = s.Description,
-                StartTime = s.StartTime,
-                EndTime = s.EndTime,
-                Location = s.Location
-            };
-
+            var read = await _service.GetSessionByIdAsync(id);
+            if (read == null) return NotFound();
             return Ok(read);
         }
 
@@ -113,18 +72,8 @@ namespace Badminton_BE.Controllers
         [SwaggerResponse(StatusCodes.Status404NotFound, "Session not found")]
         public async Task<IActionResult> UpdateSession(int id, [FromBody] SessionUpdateDto dto)
         {
-            var existing = await _repo.GetByIdAsync(id);
-            if (existing == null) return NotFound();
-
-            existing.Title = dto.Title;
-            existing.Description = dto.Description;
-            existing.StartTime = dto.StartTime;
-            existing.EndTime = dto.EndTime;
-            existing.Location = dto.Location;
-
-            _repo.Update(existing);
-            await _repo.SaveChangesAsync();
-
+            var updated = await _service.UpdateSessionAsync(id, dto);
+            if (!updated) return NotFound();
             return NoContent();
         }
     }

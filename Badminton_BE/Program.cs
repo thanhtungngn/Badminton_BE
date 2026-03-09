@@ -3,6 +3,7 @@ using Microsoft.OpenApi;
 using Microsoft.EntityFrameworkCore;
 using Badminton_BE.Data;
 using Badminton_BE.Repositories;
+using Badminton_BE.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,6 +28,7 @@ else
 // Register repositories
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 builder.Services.AddScoped<ISessionRepository, SessionRepository>();
+builder.Services.AddScoped<ISessionService, SessionService>();
 // Learn more about configuring Swagger at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
