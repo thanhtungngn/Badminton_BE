@@ -18,6 +18,8 @@ namespace Badminton_BE.Data
         public DbSet<Member> Members => Set<Member>();
         public DbSet<Contact> Contacts => Set<Contact>();
         public DbSet<SessionPlayer> SessionPlayers => Set<SessionPlayer>();
+        public DbSet<SessionPayment> SessionPayments => Set<SessionPayment>();
+        public DbSet<PlayerPayment> PlayerPayments => Set<PlayerPayment>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -30,8 +32,36 @@ namespace Badminton_BE.Data
                 b.Property(s => s.Address).IsRequired();
                 b.Property(s => s.StartTime).IsRequired();
                 b.Property(s => s.NumberOfCourts).IsRequired();
+                b.Property(s => s.PaymentQrCodeUrl).HasMaxLength(1000);
                 // store enum as string in database
                 b.Property(s => s.Status).HasConversion<string>().IsRequired();
+            });
+
+            modelBuilder.Entity<SessionPayment>(b =>
+            {
+                b.HasKey(sp => sp.Id);
+                b.Property(sp => sp.SessionId).IsRequired();
+                b.Property(sp => sp.PriceMale).IsRequired().HasColumnType("decimal(10,2)");
+                b.Property(sp => sp.PriceFemale).IsRequired().HasColumnType("decimal(10,2)");
+
+                b.HasOne(sp => sp.Session)
+                    .WithOne()
+                    .HasForeignKey<SessionPayment>(sp => sp.SessionId)
+                    .OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<PlayerPayment>(b =>
+            {
+                b.HasKey(p => p.Id);
+                b.Property(p => p.SessionPlayerId).IsRequired();
+                b.Property(p => p.AmountDue).IsRequired().HasColumnType("decimal(10,2)");
+                b.Property(p => p.AmountPaid).IsRequired().HasColumnType("decimal(10,2)");
+                b.Property(p => p.PaidStatus).HasConversion<string>().IsRequired();
+
+                b.HasOne(p => p.SessionPlayer)
+                    .WithMany()
+                    .HasForeignKey(p => p.SessionPlayerId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
             modelBuilder.Entity<Member>(b =>

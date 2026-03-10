@@ -30,6 +30,9 @@ namespace Badminton_BE.DTOs
 
         [JsonPropertyName("createdAt")]
         public DateTime CreatedAt { get; set; }
+        
+        [JsonPropertyName("ownerQrCode")]
+        public string? OwnerQrCode { get; set; }
     }
 
     public class PlayerResponseDto

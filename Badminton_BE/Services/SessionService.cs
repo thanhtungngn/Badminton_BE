@@ -11,10 +11,12 @@ namespace Badminton_BE.Services
     public class SessionService : ISessionService
     {
         private readonly ISessionRepository _repo;
+        private readonly IPlayerPaymentRepository _playerPaymentRepo;
 
-        public SessionService(ISessionRepository repo)
+        public SessionService(ISessionRepository repo, IPlayerPaymentRepository playerPaymentRepo)
         {
             _repo = repo;
+            _playerPaymentRepo = playerPaymentRepo;
         }
 
         public async Task<SessionWithPlayersDto?> GetSessionDetailAsync(int id)
@@ -30,7 +32,8 @@ namespace Badminton_BE.Services
                 Courts = s.NumberOfCourts,
                 MaxPlayersPerCourt = s.MaxPlayerPerCourt,
                 Status = s.Status.ToString().ToLowerInvariant(),
-                CreatedAt = s.CreatedDate
+                CreatedAt = s.CreatedDate,
+                OwnerQrCode = s.PaymentQrCodeUrl
             };
 
             if (s.SessionPlayers != null)
@@ -48,13 +51,15 @@ namespace Badminton_BE.Services
                         contact = (primary ?? first)?.ContactValue ?? string.Empty;
                     }
 
+                    var payment = await _playerPaymentRepo.GetBySessionPlayerIdAsync(sp.Id);
                     dto.Players.Add(new PlayerResponseDto
                     {
                         Id = sp.Id.ToString(),
                         MemberId = sp.Member.Id.ToString(),
                         Name = sp.Member.Name,
                         Contact = contact,
-                        Level = sp.Member.Level.ToString()
+                        Level = sp.Member.Level.ToString(),
+                        PaidStatus = payment != null ? (payment.PaidStatus == PaymentStatus.Paid) : (bool?)null
                     });
                 }
             }

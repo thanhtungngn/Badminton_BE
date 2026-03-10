@@ -36,6 +36,10 @@ builder.Services.AddScoped<ISessionPlayerRepository, SessionPlayerRepository>();
 builder.Services.AddScoped<ISessionService, SessionService>();
 builder.Services.AddScoped<IMemberService, MemberService>();
 builder.Services.AddScoped<ISessionPlayerService, SessionPlayerService>();
+builder.Services.AddScoped<ISessionPaymentRepository, SessionPaymentRepository>();
+builder.Services.AddScoped<IPlayerPaymentRepository, PlayerPaymentRepository>();
+builder.Services.AddScoped<ISessionPaymentRepository, SessionPaymentRepository>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
 // Learn more about configuring Swagger at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
