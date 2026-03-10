@@ -20,5 +20,14 @@ namespace Badminton_BE.Repositories
                 .OrderBy(s => s.StartTime)
                 .ToListAsync();
         }
+
+        public async Task<Session?> GetByIdWithPlayersAsync(int id)
+        {
+            return await _db.Sessions
+                .Include(s => s.SessionPlayers!)
+                    .ThenInclude(sp => sp.Member)
+                        .ThenInclude(m => m.Contacts)
+                .FirstOrDefaultAsync(s => s.Id == id);
+        }
     }
 }

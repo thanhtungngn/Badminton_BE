@@ -8,5 +8,6 @@ namespace Badminton_BE.Repositories
     public interface ISessionRepository : IRepository<Session>
     {
         Task<IEnumerable<Session>> GetByDateRangeAsync(DateTime start, DateTime end);
+        Task<Session?> GetByIdWithPlayersAsync(int id);
     }
 }

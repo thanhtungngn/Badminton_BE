@@ -17,6 +17,51 @@ namespace Badminton_BE.Services
             _repo = repo;
         }
 
+        public async Task<SessionWithPlayersDto?> GetSessionDetailAsync(int id)
+        {
+            var s = await _repo.GetByIdWithPlayersAsync(id);
+            if (s == null) return null;
+
+            var dto = new SessionWithPlayersDto
+            {
+                Id = s.Id.ToString(),
+                Address = s.Address,
+                DateCreated = s.StartTime,
+                Courts = s.NumberOfCourts,
+                MaxPlayersPerCourt = s.MaxPlayerPerCourt,
+                Status = s.Status.ToString().ToLowerInvariant(),
+                CreatedAt = s.CreatedDate
+            };
+
+            if (s.SessionPlayers != null)
+            {
+                foreach (var sp in s.SessionPlayers)
+                {
+                    if (sp.Member == null) continue;
+
+                    // pick primary contact if present, otherwise first contact value
+                    string contact = string.Empty;
+                    if (sp.Member.Contacts != null && sp.Member.Contacts.Count > 0)
+                    {
+                        var primary = sp.Member.Contacts.FirstOrDefault(c => c.IsPrimary);
+                        var first = sp.Member.Contacts.FirstOrDefault();
+                        contact = (primary ?? first)?.ContactValue ?? string.Empty;
+                    }
+
+                    dto.Players.Add(new PlayerResponseDto
+                    {
+                        Id = sp.Id.ToString(),
+                        MemberId = sp.Member.Id.ToString(),
+                        Name = sp.Member.Name,
+                        Contact = contact,
+                        Level = sp.Member.Level.ToString()
+                    });
+                }
+            }
+
+            return dto;
+        }
+
         public async Task<SessionReadDto> CreateSessionAsync(SessionCreateDto dto)
         {
             var s = new Session

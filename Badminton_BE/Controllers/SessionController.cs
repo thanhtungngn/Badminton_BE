@@ -64,6 +64,20 @@ namespace Badminton_BE.Controllers
         }
 
         /// <summary>
+        /// Get session details including players and member info.
+        /// </summary>
+        [HttpGet]
+        [Route("{id}/detail")]
+        [SwaggerResponse(StatusCodes.Status200OK, "Session detail", typeof(SessionWithPlayersDto))]
+        [SwaggerResponse(StatusCodes.Status404NotFound, "Session not found")]
+        public async Task<IActionResult> GetSessionDetail(int id)
+        {
+            var detail = await _service.GetSessionDetailAsync(id);
+            if (detail == null) return NotFound();
+            return Ok(detail);
+        }
+
+        /// <summary>
         /// Update a session.
         /// </summary>
         /// <param name="id">Session identifier.</param>
