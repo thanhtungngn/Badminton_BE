@@ -1,0 +1,55 @@
+# Exclude common development files and OS artifacts that break the EB ZIP step
+# Keep this file at repository root so EB CLI ignores these when creating the application archive
+
+# OS files
+NTUSER.DAT
+pagefile.sys
+hiberfil.sys
+swapfile.sys
+Thumbs.db
+.DS_Store
+
+# Version control
+.git/
+.gitignore
+
+# Build output
+bin/
+obj/
+**/bin/
+**/obj/
+
+# IDE settings
+.vscode/
+.vs/
+*.suo
+*.user
+*.userprefs
+*.idea/
+*.iml
+
+# Logs and caches
+*.log
+*.cache
+
+# Node modules, if any
+node_modules/
+
+# Docker build context (if you build elsewhere)
+Dockerfile.*.local
+
+# Scripts or other large artifacts you don't want uploaded
+scripts/
+
+# Database, secrets
+*.db
+*.sqlite
+secrets.*
+
+# Other
+*.pdb
+*.exe
+*.dll
+
+# Allow explicit inclusion of Badminton_BE folder contents
+!Badminton_BE/**
