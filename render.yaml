@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: badminton-be
+    env: docker
+    dockerfilePath: ./Dockerfile
+    branch: master
+    autoDeploy: true
+    plan: free
+    # Do NOT store secrets here. Set database and other secrets in Render Dashboard environment variables.
+    envVars: []
