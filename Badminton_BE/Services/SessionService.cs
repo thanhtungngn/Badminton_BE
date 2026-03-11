@@ -141,11 +141,11 @@ namespace Badminton_BE.Services
             var existing = await _repo.GetByIdAsync(id);
             if (existing == null) return false;
 
-            existing.Title = dto.Title;
-            existing.Description = dto.Description;
-            existing.StartTime = dto.StartTime;
-            existing.EndTime = dto.EndTime;
-            existing.Address = dto.Address;
+            existing.Title = dto.Title ?? existing.Title;
+            existing.Description = dto.Title ?? dto.Description;
+            existing.StartTime = dto.StartTime ?? existing.StartTime;
+            existing.EndTime = dto.EndTime ?? existing.EndTime;
+            existing.Address = dto.Address ?? existing.Address;
             existing.Status = dto.Status;
             existing.NumberOfCourts = dto.NumberOfCourts;
             existing.MaxPlayerPerCourt = dto.MaxPlayerPerCourt;
