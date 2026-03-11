@@ -12,11 +12,13 @@ namespace Badminton_BE.Services
     {
         private readonly ISessionRepository _repo;
         private readonly IPlayerPaymentRepository _playerPaymentRepo;
+        private readonly ISessionPaymentRepository _sessionPaymentRepo;
 
-        public SessionService(ISessionRepository repo, IPlayerPaymentRepository playerPaymentRepo)
+        public SessionService(ISessionRepository repo, IPlayerPaymentRepository playerPaymentRepo, ISessionPaymentRepository sessionPaymentRepo)
         {
             _repo = repo;
             _playerPaymentRepo = playerPaymentRepo;
+            _sessionPaymentRepo = sessionPaymentRepo;
         }
 
         public async Task<SessionWithPlayersDto?> GetSessionDetailAsync(int id)
@@ -78,13 +80,25 @@ namespace Badminton_BE.Services
                 Address = dto.Address,
                 Status = dto.Status,
                 NumberOfCourts = dto.NumberOfCourts,
-                MaxPlayerPerCourt = dto.MaxPlayerPerCourt
+                MaxPlayerPerCourt = dto.MaxPlayerPerCourt,
+                PaymentQrCodeUrl = dto.PaymentQrCodeUrl
             };
             // set created date explicitly
             s.CreatedDate = DateTime.UtcNow;
 
             await _repo.AddAsync(s);
             await _repo.SaveChangesAsync();
+
+            // create session-level prices
+            var sp = new SessionPayment
+            {
+                SessionId = s.Id,
+                PriceMale = dto.PriceMale,
+                PriceFemale = dto.PriceFemale
+            };
+
+            await _sessionPaymentRepo.AddAsync(sp);
+            await _sessionPaymentRepo.SaveChangesAsync();
 
             return new SessionReadDto
             {
@@ -96,7 +110,9 @@ namespace Badminton_BE.Services
                 Address = s.Address,
                 Status = s.Status,
                 NumberOfCourts = s.NumberOfCourts,
-                MaxPlayerPerCourt = s.MaxPlayerPerCourt
+                MaxPlayerPerCourt = s.MaxPlayerPerCourt,
+                PriceMale = sp.PriceMale,
+                PriceFemale = sp.PriceFemale
             };
         }
 
@@ -122,6 +138,9 @@ namespace Badminton_BE.Services
             var s = await _repo.GetByIdAsync(id);
             if (s == null) return null;
 
+            // try to include session-level prices if available
+            var spayment = await _sessionPaymentRepo.GetBySessionIdAsync(id);
+
             return new SessionReadDto
             {
                 Id = s.Id,
@@ -132,7 +151,9 @@ namespace Badminton_BE.Services
                 Address = s.Address,
                 Status = s.Status,
                 NumberOfCourts = s.NumberOfCourts,
-                MaxPlayerPerCourt = s.MaxPlayerPerCourt
+                MaxPlayerPerCourt = s.MaxPlayerPerCourt,
+                PriceMale = spayment?.PriceMale,
+                PriceFemale = spayment?.PriceFemale
             };
         }
 

@@ -18,6 +18,14 @@ namespace Badminton_BE.DTOs
         [Range(1, int.MaxValue)]
         public int NumberOfCourts { get; set; }
         public int? MaxPlayerPerCourt { get; set; }
+        // Price per player by gender for this session
+        [Required]
+        [Range(0, double.MaxValue)]
+        public decimal PriceMale { get; set; }
+
+        [Required]
+        [Range(0, double.MaxValue)]
+        public decimal PriceFemale { get; set; }
         // optional URL to owner's payment QR code (can be base64 data uri or external URL)
         public string? PaymentQrCodeUrl { get; set; }
     }
