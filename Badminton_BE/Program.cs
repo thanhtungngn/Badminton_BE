@@ -80,6 +80,22 @@ var app = builder.Build();
 var enableSwagger = app.Environment.IsDevelopment() ||
                     string.Equals(builder.Configuration["ENABLE_SWAGGER"], "true", StringComparison.OrdinalIgnoreCase);
 
+// Log environment and critical configuration flags for debugging on Render
+try
+{
+    var startupLogger = app.Logger;
+    startupLogger.LogInformation("Environment: {Environment}", app.Environment.EnvironmentName);
+    var enableSwaggerVar = builder.Configuration["ENABLE_SWAGGER"];
+    startupLogger.LogInformation("ENABLE_SWAGGER env var (raw): {EnableSwagger}", enableSwaggerVar ?? "<null>");
+    startupLogger.LogInformation("Swagger enabled: {Enabled}", enableSwagger);
+    // Do not log sensitive connection strings. Log only presence for troubleshooting.
+    startupLogger.LogInformation("DefaultConnection configured: {HasDefaultConnection}", !string.IsNullOrEmpty(defaultConn));
+}
+catch (Exception ex)
+{
+    try { app.Logger.LogError(ex, "Error while logging startup diagnostics"); } catch { }
+}
+
 if (enableSwagger)
 {
     app.UseSwagger();
@@ -99,26 +115,26 @@ try
     using (var scope = app.Services.CreateScope())
     {
         var services = scope.ServiceProvider;
-        var loggerFactory = services.GetService<Microsoft.Extensions.Logging.ILoggerFactory>();
-        var logger = loggerFactory?.CreateLogger("DatabaseMigration");
+                var loggerFactory = services.GetService<Microsoft.Extensions.Logging.ILoggerFactory>();
+                var migrationLogger = loggerFactory?.CreateLogger("DatabaseMigration");
 
         try
         {
             var db = services.GetRequiredService<AppDbContext>();
             if (db.Database.IsRelational())
             {
-                logger?.LogInformation("Applying database migrations...");
+                    migrationLogger?.LogInformation("Applying database migrations...");
                 db.Database.Migrate();
-                logger?.LogInformation("Database migrations applied.");
+                    migrationLogger?.LogInformation("Database migrations applied.");
             }
             else
             {
-                logger?.LogInformation("Database provider is not relational; skipping migrations.");
+                    migrationLogger?.LogInformation("Database provider is not relational; skipping migrations.");
             }
         }
         catch (Exception ex)
         {
-            logger?.LogError(ex, "An error occurred while migrating the database.");
+            migrationLogger?.LogError(ex, "An error occurred while migrating the database.");
             throw;
         }
     }
