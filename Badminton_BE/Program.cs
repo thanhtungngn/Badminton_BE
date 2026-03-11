@@ -1,3 +1,4 @@
+using System;
 using System.Reflection;
 using Microsoft.OpenApi;
 using Swashbuckle.AspNetCore.Annotations;
@@ -75,7 +76,11 @@ builder.Services.AddSwaggerGen(c =>
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
+// Enable Swagger in Development or when the environment variable `ENABLE_SWAGGER` is set to "true".
+var enableSwagger = app.Environment.IsDevelopment() ||
+                    string.Equals(builder.Configuration["ENABLE_SWAGGER"], "true", StringComparison.OrdinalIgnoreCase);
+
+if (enableSwagger)
 {
     app.UseSwagger();
     app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Badminton API v1"));
