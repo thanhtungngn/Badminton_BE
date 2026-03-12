@@ -57,5 +57,8 @@ namespace Badminton_BE.DTOs
 
         [JsonPropertyName("paidStatus")]
         public bool? PaidStatus { get; set; }
+
+        [JsonPropertyName("price")]
+        public decimal Price { get; set; }
     }
 }

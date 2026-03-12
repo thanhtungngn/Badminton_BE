@@ -38,6 +38,9 @@ namespace Badminton_BE.Services
                 OwnerQrCode = s.PaymentQrCodeUrl
             };
 
+            // load session-level prices once
+            var sessionPayment = await _sessionPaymentRepo.GetBySessionIdAsync(s.Id);
+
             if (s.SessionPlayers != null)
             {
                 foreach (var sp in s.SessionPlayers)
@@ -54,6 +57,13 @@ namespace Badminton_BE.Services
                     }
 
                     var payment = await _playerPaymentRepo.GetBySessionPlayerIdAsync(sp.Id);
+                    // determine price based on member gender and configured session prices
+                    decimal price = 0m;
+                    if (sessionPayment != null)
+                    {
+                        price = sp.Member.Gender == Gender.Male ? sessionPayment.PriceMale : sessionPayment.PriceFemale;
+                    }
+
                     dto.Players.Add(new PlayerResponseDto
                     {
                         Id = sp.Id.ToString(),
@@ -61,7 +71,8 @@ namespace Badminton_BE.Services
                         Name = sp.Member.Name,
                         Contact = contact,
                         Level = sp.Member.Level.ToString(),
-                        PaidStatus = payment != null ? (payment.PaidStatus == PaymentStatus.Paid) : (bool?)null
+                        PaidStatus = payment != null ? (payment.PaidStatus == PaymentStatus.Paid) : (bool?)null,
+                        Price = price
                     });
                 }
             }
