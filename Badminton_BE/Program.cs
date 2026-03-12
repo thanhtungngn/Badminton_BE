@@ -16,10 +16,11 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AllowReactApp",
         policy =>
         {
-            policy.WithOrigins("http://localhost:5173")
-                  .WithOrigins("https://badminton-web-lqny.onrender.com/")
+            // Allow the local dev server and the deployed frontend (no trailing slash)
+            policy.WithOrigins("http://localhost:5173", "https://badminton-web-lqny.onrender.com")
                   .AllowAnyHeader()
-                  .AllowAnyMethod();
+                  .AllowAnyMethod()
+                  .AllowCredentials();
         });
 });
 
