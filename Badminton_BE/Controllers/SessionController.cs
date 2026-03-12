@@ -101,5 +101,18 @@ namespace Badminton_BE.Controllers
             if (!updated) return NotFound();
             return NoContent();
         }
+
+        /// <summary>
+        /// Delete a session by id.
+        /// </summary>
+        [HttpDelete("{id}")]
+        [SwaggerResponse(StatusCodes.Status204NoContent, "Session deleted")]
+        [SwaggerResponse(StatusCodes.Status404NotFound, "Session not found")]
+        public async Task<IActionResult> DeleteSession(int id)
+        {
+            var deleted = await _service.DeleteSessionAsync(id);
+            if (!deleted) return NotFound();
+            return NoContent();
+        }
     }
 }

@@ -198,5 +198,36 @@ namespace Badminton_BE.Services
 
             return true;
         }
+
+        public async Task<bool> DeleteSessionAsync(int id)
+        {
+            var existing = await _repo.GetByIdWithPlayersAsync(id);
+            if (existing == null) return false;
+
+            // Remove player payments for this session (if any)
+            var playerPayments = await _playerPaymentRepo.GetBySessionIdAsync(id);
+            if (playerPayments != null)
+            {
+                foreach (var pp in playerPayments)
+                {
+                    _playerPaymentRepo.Remove(pp);
+                }
+                await _playerPaymentRepo.SaveChangesAsync();
+            }
+
+            // Remove session-level payment if present
+            var spayment = await _sessionPaymentRepo.GetBySessionIdAsync(id);
+            if (spayment != null)
+            {
+                _sessionPaymentRepo.Remove(spayment);
+                await _sessionPaymentRepo.SaveChangesAsync();
+            }
+
+            // Remove the session itself
+            _repo.Remove(existing);
+            await _repo.SaveChangesAsync();
+
+            return true;
+        }
     }
 }
