@@ -140,7 +140,8 @@ namespace Badminton_BE.Services
                 Address = s.Address,
                 Status = s.Status,
                 NumberOfCourts = s.NumberOfCourts,
-                MaxPlayerPerCourt = s.MaxPlayerPerCourt
+                MaxPlayerPerCourt = s.MaxPlayerPerCourt,
+                RegisteredPlayers = s.SessionPlayers != null ? s.SessionPlayers.Count : 0
             }).ToList();
         }
 
@@ -159,7 +160,8 @@ namespace Badminton_BE.Services
                 Address = s.Address,
                 Status = s.Status,
                 NumberOfCourts = s.NumberOfCourts,
-                MaxPlayerPerCourt = s.MaxPlayerPerCourt
+                MaxPlayerPerCourt = s.MaxPlayerPerCourt,
+                RegisteredPlayers = s.SessionPlayers != null ? s.SessionPlayers.Count : 0
             }).ToList();
         }
 

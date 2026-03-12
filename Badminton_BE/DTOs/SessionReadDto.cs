@@ -14,6 +14,8 @@ namespace Badminton_BE.DTOs
         public SessionStatus Status { get; set; }
         public int NumberOfCourts { get; set; }
         public int? MaxPlayerPerCourt { get; set; }
+        // Number of players registered for the session
+        public int RegisteredPlayers { get; set; }
         // Optional prices for responses when available
         public decimal? PriceMale { get; set; }
         public decimal? PriceFemale { get; set; }
