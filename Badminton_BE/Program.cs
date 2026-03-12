@@ -17,6 +17,7 @@ builder.Services.AddCors(options =>
         policy =>
         {
             policy.WithOrigins("http://localhost:5173")
+                  .WithOrigins("https://badminton-web-lqny.onrender.com/")
                   .AllowAnyHeader()
                   .AllowAnyMethod();
         });
