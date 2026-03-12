@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Badminton_BE.DTOs;
 
-namespace Badminton_BE.Services
+namespace Badminton_BE.Services.Interfaces
 {
     public interface IMemberService
     {

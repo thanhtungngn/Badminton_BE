@@ -49,6 +49,17 @@ namespace Badminton_BE.Controllers
         }
 
         /// <summary>
+        /// Get sessions for dashboard: only upcoming and ongoing sessions.
+        /// </summary>
+        [HttpGet("dashboard")]
+        [SwaggerResponse(StatusCodes.Status200OK, "A list of active sessions for dashboard", typeof(IEnumerable<SessionReadDto>))]
+        public async Task<IActionResult> GetActiveSessions()
+        {
+            var sessions = await _service.GetActiveSessionsAsync();
+            return Ok(sessions);
+        }
+
+        /// <summary>
         /// Get a session by id.
         /// </summary>
         /// <param name="id">Session identifier.</param>

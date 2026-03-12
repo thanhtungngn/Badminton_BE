@@ -10,8 +10,8 @@ namespace Badminton_BE.Repositories
         protected readonly AppDbContext _db;
         public Repository(AppDbContext db) => _db = db;
 
-        public virtual async Task<IEnumerable<T>> GetAllAsync()
-            => await _db.Set<T>().AsNoTracking().ToListAsync();
+        public virtual IQueryable<T> GetAll()
+            => _db.Set<T>().AsNoTracking();
 
         public virtual async Task<T?> GetByIdAsync(int id)
             => await _db.Set<T>().FindAsync(id).AsTask();
