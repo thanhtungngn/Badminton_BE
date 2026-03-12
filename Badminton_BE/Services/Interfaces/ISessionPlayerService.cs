@@ -2,7 +2,7 @@ using System.Threading.Tasks;
 using Badminton_BE.DTOs;
 using Badminton_BE.Models;
 
-namespace Badminton_BE.Services
+namespace Badminton_BE.Services.Interfaces
 {
     public interface ISessionPlayerService
     {

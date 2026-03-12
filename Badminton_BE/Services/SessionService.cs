@@ -118,7 +118,7 @@ namespace Badminton_BE.Services
 
         public async Task<IEnumerable<SessionReadDto>> GetSessionsAsync()
         {
-            var sessions = await _repo.GetAllAsync();
+            var sessions = _repo.GetAll();
             return sessions.Select(s => new SessionReadDto
             {
                 Id = s.Id,
@@ -130,7 +130,26 @@ namespace Badminton_BE.Services
                 Status = s.Status,
                 NumberOfCourts = s.NumberOfCourts,
                 MaxPlayerPerCourt = s.MaxPlayerPerCourt
-            });
+            }).ToList();
+        }
+
+        public async Task<IEnumerable<SessionReadDto>> GetActiveSessionsAsync()
+        {
+            var sessions = _repo.GetAll();
+            // Only include Upcoming and OnGoing sessions for dashboard
+            var active = sessions.Where(s => s.Status == SessionStatus.Upcoming || s.Status == SessionStatus.OnGoing);
+            return active.Select(s => new SessionReadDto
+            {
+                Id = s.Id,
+                Title = s.Title,
+                Description = s.Description,
+                StartTime = s.StartTime,
+                EndTime = s.EndTime,
+                Address = s.Address,
+                Status = s.Status,
+                NumberOfCourts = s.NumberOfCourts,
+                MaxPlayerPerCourt = s.MaxPlayerPerCourt
+            }).ToList();
         }
 
         public async Task<SessionReadDto?> GetSessionByIdAsync(int id)
