@@ -86,5 +86,15 @@ namespace Badminton_BE.Services
                 UpdatedDate = sp.UpdatedDate
             };
         }
+
+        public async Task<bool> RemoveAsync(int id)
+        {
+            var sp = await _repo.GetByIdWithIncludesAsync(id);
+            if (sp == null) return false;
+
+            _repo.Remove(sp);
+            await _repo.SaveChangesAsync();
+            return true;
+        }
     }
 }

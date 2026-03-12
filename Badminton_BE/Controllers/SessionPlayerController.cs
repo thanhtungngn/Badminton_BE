@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
 using System.Threading.Tasks;
 using Badminton_BE.Services;
 using Badminton_BE.DTOs;
@@ -63,6 +64,19 @@ namespace Badminton_BE.Controllers
             var sp = await _service.GetByIdAsync(id);
             if (sp == null) return NotFound();
             return Ok(sp);
+        }
+
+        /// <summary>
+        /// Remove a member from a session by session-player id.
+        /// </summary>
+        [HttpDelete("{id}")]
+        [SwaggerResponse(StatusCodes.Status204NoContent, "Member removed from session")]
+        [SwaggerResponse(StatusCodes.Status404NotFound, "Session player not found")]
+        public async Task<IActionResult> Remove(int id)
+        {
+            var ok = await _service.RemoveAsync(id);
+            if (!ok) return NotFound();
+            return NoContent();
         }
     }
 }
