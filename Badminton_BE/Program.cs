@@ -117,21 +117,21 @@ try
     using (var scope = app.Services.CreateScope())
     {
         var services = scope.ServiceProvider;
-                var loggerFactory = services.GetService<Microsoft.Extensions.Logging.ILoggerFactory>();
-                var migrationLogger = loggerFactory?.CreateLogger("DatabaseMigration");
+        var loggerFactory = services.GetService<Microsoft.Extensions.Logging.ILoggerFactory>();
+        var migrationLogger = loggerFactory?.CreateLogger("DatabaseMigration");
 
         try
         {
             var db = services.GetRequiredService<AppDbContext>();
             if (db.Database.IsRelational())
             {
-                    migrationLogger?.LogInformation("Applying database migrations...");
+                migrationLogger?.LogInformation("Applying database migrations...");
                 db.Database.Migrate();
-                    migrationLogger?.LogInformation("Database migrations applied.");
+                migrationLogger?.LogInformation("Database migrations applied.");
             }
             else
             {
-                    migrationLogger?.LogInformation("Database provider is not relational; skipping migrations.");
+                migrationLogger?.LogInformation("Database provider is not relational; skipping migrations.");
             }
         }
         catch (Exception ex)

@@ -9,5 +9,6 @@ namespace Badminton_BE.Services
         Task<SessionPlayerReadDto?> AddMemberToSessionAsync(SessionPlayerCreateDto dto);
         Task<SessionPlayerReadDto?> GetByIdAsync(int id);
         Task<bool> ChangeStatusAsync(int id, SessionPlayerStatus status);
+        Task<bool> RemoveAsync(int id);
     }
 }
