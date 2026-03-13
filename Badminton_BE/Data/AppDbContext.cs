@@ -26,6 +26,7 @@ namespace Badminton_BE.Data
         public DbSet<SessionPlayer> SessionPlayers => Set<SessionPlayer>();
         public DbSet<SessionPayment> SessionPayments => Set<SessionPayment>();
         public DbSet<PlayerPayment> PlayerPayments => Set<PlayerPayment>();
+        public DbSet<RevokedToken> RevokedTokens => Set<RevokedToken>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -103,7 +104,25 @@ namespace Badminton_BE.Data
                 b.Property(u => u.Username).IsRequired().HasMaxLength(50);
                 b.Property(u => u.NormalizedUsername).IsRequired().HasMaxLength(50);
                 b.Property(u => u.PasswordHash).IsRequired().HasMaxLength(1000);
+                b.Property(u => u.Name).HasMaxLength(200);
+                b.Property(u => u.AvatarUrl).HasMaxLength(1000);
+                b.Property(u => u.PhoneNumber).HasMaxLength(50);
+                b.Property(u => u.Email).HasMaxLength(255);
+                b.Property(u => u.Facebook).HasMaxLength(500);
+                b.Property(u => u.BankAccountNumber).HasMaxLength(100);
+                b.Property(u => u.BankOwnerName).HasMaxLength(200);
+                b.Property(u => u.BankName).HasMaxLength(200);
                 b.HasIndex(u => u.NormalizedUsername).IsUnique();
+            });
+
+            modelBuilder.Entity<RevokedToken>(b =>
+            {
+                b.HasKey(x => x.Id);
+                b.Property(x => x.UserId).IsRequired();
+                b.Property(x => x.Jti).IsRequired().HasMaxLength(100);
+                b.Property(x => x.ExpiresAt).IsRequired();
+                b.HasIndex(x => x.Jti).IsUnique();
+                b.HasIndex(x => x.ExpiresAt);
             });
 
             modelBuilder.Entity<Contact>(b =>

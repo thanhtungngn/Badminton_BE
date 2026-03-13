@@ -15,12 +15,14 @@ namespace Badminton_BE.Services
     public class AuthService : IAuthService
     {
         private readonly IUserRepository _userRepository;
+        private readonly IRevokedTokenRepository _revokedTokenRepository;
         private readonly JwtOptions _jwtOptions;
         private readonly PasswordHasher<AppUser> _passwordHasher;
 
-        public AuthService(IUserRepository userRepository, IOptions<JwtOptions> jwtOptions)
+        public AuthService(IUserRepository userRepository, IRevokedTokenRepository revokedTokenRepository, IOptions<JwtOptions> jwtOptions)
         {
             _userRepository = userRepository;
+            _revokedTokenRepository = revokedTokenRepository;
             _jwtOptions = jwtOptions.Value;
             _passwordHasher = new PasswordHasher<AppUser>();
         }
@@ -46,6 +48,58 @@ namespace Badminton_BE.Services
             await _userRepository.SaveChangesAsync();
 
             return GenerateAuthResponse(user);
+        }
+
+        public async Task LogoutAsync(int userId, string jti, DateTime expiresAt)
+        {
+            var existing = await _revokedTokenRepository.GetByJtiAsync(jti);
+            if (existing != null)
+            {
+                return;
+            }
+
+            var revokedToken = new RevokedToken
+            {
+                UserId = userId,
+                Jti = jti,
+                ExpiresAt = expiresAt
+            };
+
+            await _revokedTokenRepository.AddAsync(revokedToken);
+            await _revokedTokenRepository.SaveChangesAsync();
+        }
+
+        public async Task<UserProfileReadDto?> GetProfileAsync(int userId)
+        {
+            var user = await _userRepository.GetByIdAsync(userId);
+            if (user == null)
+            {
+                return null;
+            }
+
+            return MapToProfileDto(user);
+        }
+
+        public async Task<bool> UpdateProfileAsync(int userId, UserProfileUpdateDto dto)
+        {
+            var user = await _userRepository.GetByIdAsync(userId);
+            if (user == null)
+            {
+                return false;
+            }
+
+            user.Name = dto.Name?.Trim();
+            user.AvatarUrl = dto.AvatarUrl?.Trim();
+            user.PhoneNumber = dto.PhoneNumber?.Trim();
+            user.Email = dto.Email?.Trim();
+            user.Facebook = dto.Facebook?.Trim();
+            user.BankAccountNumber = dto.BankAccountNumber?.Trim();
+            user.BankOwnerName = dto.BankOwnerName?.Trim();
+            user.BankName = dto.BankName?.Trim();
+
+            _userRepository.Update(user);
+            await _userRepository.SaveChangesAsync();
+            return true;
         }
 
         public async Task<AuthResponseDto?> LoginAsync(LoginRequestDto dto)
@@ -80,6 +134,7 @@ namespace Badminton_BE.Services
             var claims = new[]
             {
                 new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                 new Claim(JwtRegisteredClaimNames.UniqueName, user.Username),
                 new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new Claim(ClaimTypes.Name, user.Username)
@@ -103,6 +158,22 @@ namespace Badminton_BE.Services
         private static string NormalizeUsername(string username)
         {
             return username.Trim().ToUpperInvariant();
+        }
+
+        private static UserProfileReadDto MapToProfileDto(AppUser user)
+        {
+            return new UserProfileReadDto
+            {
+                Username = user.Username,
+                Name = user.Name,
+                AvatarUrl = user.AvatarUrl,
+                PhoneNumber = user.PhoneNumber,
+                Email = user.Email,
+                Facebook = user.Facebook,
+                BankAccountNumber = user.BankAccountNumber,
+                BankOwnerName = user.BankOwnerName,
+                BankName = user.BankName
+            };
         }
     }
 }

@@ -11,5 +11,13 @@ namespace Badminton_BE.Models
         public string Username { get; set; } = string.Empty;
         public string NormalizedUsername { get; set; } = string.Empty;
         public string PasswordHash { get; set; } = string.Empty;
+        public string? Name { get; set; }
+        public string? AvatarUrl { get; set; }
+        public string? PhoneNumber { get; set; }
+        public string? Email { get; set; }
+        public string? Facebook { get; set; }
+        public string? BankAccountNumber { get; set; }
+        public string? BankOwnerName { get; set; }
+        public string? BankName { get; set; }
     }
 }
