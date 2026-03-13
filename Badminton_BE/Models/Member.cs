@@ -19,11 +19,12 @@ namespace Badminton_BE.Models
         Other = 2
     }
 
-    public class Member : IEntity
+    public class Member : IEntity, IUserOwnedEntity
     {
         public int Id { get; set; }
         public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedDate { get; set; }
+        public int UserId { get; set; }
 
         public string Name { get; set; } = string.Empty;
         public Gender Gender { get; set; }

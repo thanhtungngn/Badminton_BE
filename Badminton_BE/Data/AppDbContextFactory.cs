@@ -21,15 +21,15 @@ namespace Badminton_BE.Data
                 .Build();
 
             var connectionString = config.GetConnectionString("DefaultConnection");
-            if (string.IsNullOrEmpty(connectionString))
+            if (string.IsNullOrWhiteSpace(connectionString))
             {
-                throw new InvalidOperationException("DefaultConnection not found. Provide a connection string in appsettings.json or via environment variable.");
+                connectionString = "server=localhost;port=3306;database=BadmintonDb;user=root;password=Mun1401@";
             }
 
             var optionsBuilder = new DbContextOptionsBuilder<AppDbContext>();
 
-            // Auto-detect server version using Pomelo
-            var serverVersion = ServerVersion.AutoDetect(connectionString);
+            // Use a fixed server version so EF tooling can work without a live database connection.
+            var serverVersion = new MySqlServerVersion(new Version(8, 0, 36));
             optionsBuilder.UseMySql(connectionString, serverVersion);
 
             return new AppDbContext(optionsBuilder.Options);

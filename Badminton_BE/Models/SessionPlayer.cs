@@ -10,11 +10,12 @@ namespace Badminton_BE.Models
         NotPaid = 3
     }
 
-    public class SessionPlayer : IEntity
+    public class SessionPlayer : IEntity, IUserOwnedEntity
     {
         public int Id { get; set; }
         public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedDate { get; set; }
+        public int UserId { get; set; }
 
         public int SessionId { get; set; }
         public Session? Session { get; set; }

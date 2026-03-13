@@ -9,11 +9,12 @@ namespace Badminton_BE.Models
         Ended = 2
     }
 
-    public class Session : IEntity
+    public class Session : IEntity, IUserOwnedEntity
     {
         public int Id { get; set; }
         public DateTime CreatedDate { get; set; } = DateTime.UtcNow;
         public DateTime? UpdatedDate { get; set; }
+        public int UserId { get; set; }
 
         public string Title { get; set; } = string.Empty;
         public string? Description { get; set; }
