@@ -22,7 +22,7 @@ builder.Services.AddCors(options =>
         policy =>
         {
             // Allow the local dev server and the deployed frontend (no trailing slash)
-            policy.WithOrigins("http://localhost:5173", "https://badminton-web-lqny.onrender.com")
+            policy.WithOrigins("http://localhost:5173", "http://172.18.144.1:5173", "https://badminton-web-lqny.onrender.com")
                   .AllowAnyHeader()
                   .AllowAnyMethod()
                   .AllowCredentials();
