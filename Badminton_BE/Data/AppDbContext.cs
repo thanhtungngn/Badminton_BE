@@ -4,22 +4,29 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
 using Badminton_BE.Models;
+using Badminton_BE.Services;
 
 namespace Badminton_BE.Data
 {
     public class AppDbContext : DbContext
     {
-        public AppDbContext(DbContextOptions<AppDbContext> options)
+        private readonly ICurrentUserService _currentUserService;
+        private int? CurrentUserId => _currentUserService.UserId;
+
+        public AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUserService? currentUserService = null)
             : base(options)
         {
+            _currentUserService = currentUserService ?? new DesignTimeCurrentUserService();
         }
 
         public DbSet<Session> Sessions => Set<Session>();
         public DbSet<Member> Members => Set<Member>();
+        public DbSet<AppUser> Users => Set<AppUser>();
         public DbSet<Contact> Contacts => Set<Contact>();
         public DbSet<SessionPlayer> SessionPlayers => Set<SessionPlayer>();
         public DbSet<SessionPayment> SessionPayments => Set<SessionPayment>();
         public DbSet<PlayerPayment> PlayerPayments => Set<PlayerPayment>();
+        public DbSet<RevokedToken> RevokedTokens => Set<RevokedToken>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -28,6 +35,8 @@ namespace Badminton_BE.Data
             modelBuilder.Entity<Session>(b =>
             {
                 b.HasKey(s => s.Id);
+                b.Property(s => s.UserId).IsRequired();
+                b.HasIndex(s => s.UserId);
                 b.Property(s => s.Title).IsRequired().HasMaxLength(200);
                 b.Property(s => s.Address).IsRequired();
                 b.Property(s => s.StartTime).IsRequired();
@@ -35,11 +44,14 @@ namespace Badminton_BE.Data
                 b.Property(s => s.PaymentQrCodeUrl).HasMaxLength(1000);
                 // store enum as string in database
                 b.Property(s => s.Status).HasConversion<string>().IsRequired();
+                b.HasQueryFilter(s => !CurrentUserId.HasValue || s.UserId == CurrentUserId.Value);
             });
 
             modelBuilder.Entity<SessionPayment>(b =>
             {
                 b.HasKey(sp => sp.Id);
+                b.Property(sp => sp.UserId).IsRequired();
+                b.HasIndex(sp => sp.UserId);
                 b.Property(sp => sp.SessionId).IsRequired();
                 b.Property(sp => sp.PriceMale).IsRequired().HasColumnType("decimal(10,2)");
                 b.Property(sp => sp.PriceFemale).IsRequired().HasColumnType("decimal(10,2)");
@@ -48,11 +60,14 @@ namespace Badminton_BE.Data
                     .WithOne()
                     .HasForeignKey<SessionPayment>(sp => sp.SessionId)
                     .OnDelete(DeleteBehavior.Cascade);
+                b.HasQueryFilter(sp => !CurrentUserId.HasValue || sp.UserId == CurrentUserId.Value);
             });
 
             modelBuilder.Entity<PlayerPayment>(b =>
             {
                 b.HasKey(p => p.Id);
+                b.Property(p => p.UserId).IsRequired();
+                b.HasIndex(p => p.UserId);
                 b.Property(p => p.SessionPlayerId).IsRequired();
                 b.Property(p => p.AmountDue).IsRequired().HasColumnType("decimal(10,2)");
                 b.Property(p => p.AmountPaid).IsRequired().HasColumnType("decimal(10,2)");
@@ -62,11 +77,14 @@ namespace Badminton_BE.Data
                     .WithMany()
                     .HasForeignKey(p => p.SessionPlayerId)
                     .OnDelete(DeleteBehavior.Cascade);
+                b.HasQueryFilter(p => !CurrentUserId.HasValue || p.UserId == CurrentUserId.Value);
             });
 
             modelBuilder.Entity<Member>(b =>
             {
                 b.HasKey(m => m.Id);
+                b.Property(m => m.UserId).IsRequired();
+                b.HasIndex(m => m.UserId);
                 b.Property(m => m.Name).IsRequired().HasMaxLength(200);
                 b.Property(m => m.Gender).HasConversion<string>().IsRequired();
                 b.Property(m => m.Level).HasConversion<string>().IsRequired();
@@ -77,19 +95,52 @@ namespace Badminton_BE.Data
                     .WithOne(c => c.Member)
                     .HasForeignKey(c => c.MemberId)
                     .OnDelete(DeleteBehavior.Cascade);
+                b.HasQueryFilter(m => !CurrentUserId.HasValue || m.UserId == CurrentUserId.Value);
+            });
+
+            modelBuilder.Entity<AppUser>(b =>
+            {
+                b.HasKey(u => u.Id);
+                b.Property(u => u.Username).IsRequired().HasMaxLength(50);
+                b.Property(u => u.NormalizedUsername).IsRequired().HasMaxLength(50);
+                b.Property(u => u.PasswordHash).IsRequired().HasMaxLength(1000);
+                b.Property(u => u.Name).HasMaxLength(200);
+                b.Property(u => u.AvatarUrl).HasMaxLength(1000);
+                b.Property(u => u.PhoneNumber).HasMaxLength(50);
+                b.Property(u => u.Email).HasMaxLength(255);
+                b.Property(u => u.Facebook).HasMaxLength(500);
+                b.Property(u => u.BankAccountNumber).HasMaxLength(100);
+                b.Property(u => u.BankOwnerName).HasMaxLength(200);
+                b.Property(u => u.BankName).HasMaxLength(200);
+                b.HasIndex(u => u.NormalizedUsername).IsUnique();
+            });
+
+            modelBuilder.Entity<RevokedToken>(b =>
+            {
+                b.HasKey(x => x.Id);
+                b.Property(x => x.UserId).IsRequired();
+                b.Property(x => x.Jti).IsRequired().HasMaxLength(100);
+                b.Property(x => x.ExpiresAt).IsRequired();
+                b.HasIndex(x => x.Jti).IsUnique();
+                b.HasIndex(x => x.ExpiresAt);
             });
 
             modelBuilder.Entity<Contact>(b =>
             {
                 b.HasKey(c => c.Id);
+                b.Property(c => c.UserId).IsRequired();
+                b.HasIndex(c => c.UserId);
                 b.Property(c => c.ContactType).HasConversion<string>().IsRequired();
                 b.Property(c => c.ContactValue).IsRequired().HasMaxLength(500);
                 b.Property(c => c.IsPrimary).IsRequired();
+                b.HasQueryFilter(c => !CurrentUserId.HasValue || c.UserId == CurrentUserId.Value);
             });
 
             modelBuilder.Entity<SessionPlayer>(b =>
             {
                 b.HasKey(sp => sp.Id);
+                b.Property(sp => sp.UserId).IsRequired();
+                b.HasIndex(sp => sp.UserId);
                 b.Property(sp => sp.SessionId).IsRequired();
                 b.Property(sp => sp.MemberId).IsRequired();
                 b.Property(sp => sp.Status).HasConversion<string>().IsRequired();
@@ -103,6 +154,7 @@ namespace Badminton_BE.Data
                     .WithMany(m => m.SessionPlayers)
                     .HasForeignKey(sp => sp.MemberId)
                     .OnDelete(DeleteBehavior.Cascade);
+                b.HasQueryFilter(sp => !CurrentUserId.HasValue || sp.UserId == CurrentUserId.Value);
             });
         }
 
@@ -133,6 +185,11 @@ namespace Badminton_BE.Data
                 {
                     // set CreatedDate on add
                     entity.CreatedDate = utcNow;
+
+                    if (entry.Entity is IUserOwnedEntity ownedEntity && CurrentUserId.HasValue && ownedEntity.UserId == 0)
+                    {
+                        ownedEntity.UserId = CurrentUserId.Value;
+                    }
                 }
 
                 if (entry.State == EntityState.Modified)
