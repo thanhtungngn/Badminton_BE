@@ -9,5 +9,7 @@ namespace Badminton_BE.Repositories.Interfaces
         Task<Member?> GetByIdWithContactsAsync(int id);
         Task<IEnumerable<Member>> GetAllWithContactsAsync();
         Task<Member?> GetByContactValueAsync(string contactValue);
+        Task<Member?> GetByContactValueIgnoreFiltersAsync(string contactValue);
+        Task<IEnumerable<Member>> GetMembersWithoutPlayerRankingAsync();
     }
 }

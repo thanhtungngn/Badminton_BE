@@ -10,11 +10,22 @@ namespace Badminton_BE.Services
     public class MemberService : IMemberService
     {
         private readonly IMemberRepository _repo;
+        private readonly IPlayerRankingRepository _playerRankingRepo;
+        private readonly ISessionPlayerRepository _sessionPlayerRepo;
+        private readonly IPlayerPaymentRepository _playerPaymentRepo;
         private readonly IPlayerRankingService _playerRankingService;
 
-        public MemberService(IMemberRepository repo, IPlayerRankingService playerRankingService)
+        public MemberService(
+            IMemberRepository repo,
+            IPlayerRankingRepository playerRankingRepo,
+            ISessionPlayerRepository sessionPlayerRepo,
+            IPlayerPaymentRepository playerPaymentRepo,
+            IPlayerRankingService playerRankingService)
         {
             _repo = repo;
+            _playerRankingRepo = playerRankingRepo;
+            _sessionPlayerRepo = sessionPlayerRepo;
+            _playerPaymentRepo = playerPaymentRepo;
             _playerRankingService = playerRankingService;
         }
 
@@ -36,7 +47,7 @@ namespace Badminton_BE.Services
                     member.Contacts.Add(new Contact
                     {
                         ContactType = c.ContactType,
-                        ContactValue = c.ContactValue,
+                        ContactValue = c.ContactValue.Trim(),
                         IsPrimary = c.IsPrimary
                     });
                 }
@@ -69,6 +80,61 @@ namespace Badminton_BE.Services
             return MapToReadDto(m);
         }
 
+        public async Task<MemberLookupDto?> GetMemberLookupByContactAsync(string contactValue)
+        {
+            var normalizedContactValue = contactValue.Trim();
+
+            var member = await _repo.GetByContactValueIgnoreFiltersAsync(normalizedContactValue);
+
+            if (member == null)
+            {
+                return null;
+            }
+
+            var matchedContactValue = member.Contacts
+                .Where(c => c.ContactValue == normalizedContactValue)
+                .OrderByDescending(c => c.IsPrimary)
+                .Select(c => c.ContactValue)
+                .FirstOrDefault() ?? normalizedContactValue;
+
+            var ranking = await _playerRankingRepo.GetByMemberIdWithRankingAsync(member.Id);
+            var sessionPlayers = (await _sessionPlayerRepo.GetByMemberIdWithSessionAsync(member.Id)).ToList();
+            var payments = (await _playerPaymentRepo.GetBySessionPlayerIdsAsync(sessionPlayers.Select(sp => sp.Id)))
+                .ToDictionary(p => p.SessionPlayerId);
+
+            return new MemberLookupDto
+            {
+                MemberId = member.Id,
+                Name = member.Name,
+                ContactValue = matchedContactValue,
+                Level = member.Level.ToString(),
+                EloPoint = ranking?.EloPoint,
+                RankingName = ranking?.Ranking?.Name,
+                Sessions = sessionPlayers
+                .Where(sp => sp.Session != null)
+                .Select(sp =>
+                {
+                    payments.TryGetValue(sp.Id, out var payment);
+                    return new MemberLookupSessionDto
+                    {
+                        SessionId = sp.Session!.Id,
+                        SessionPlayerId = sp.Id,
+                        Title = sp.Session.Title,
+                        StartTime = sp.Session.StartTime,
+                        EndTime = sp.Session.EndTime,
+                        Address = sp.Session.Address,
+                        SessionStatus = sp.Session.Status.ToString(),
+                        PlayerStatus = sp.Status.ToString(),
+                        PaymentStatus = payment?.PaidStatus.ToString() ?? PaymentStatus.NotPaid.ToString(),
+                        AmountDue = payment?.AmountDue,
+                        AmountPaid = payment?.AmountPaid,
+                        PaidAt = payment?.PaidAt
+                    };
+                })
+                .ToList()
+            };
+        }
+
         public async Task<bool> UpdateMemberAsync(int id, MemberUpdateDto dto)
         {
             var existing = await _repo.GetByIdWithContactsAsync(id);
@@ -89,7 +155,7 @@ namespace Badminton_BE.Services
                     existing.Contacts.Add(new Contact
                     {
                         ContactType = c.ContactType,
-                        ContactValue = c.ContactValue,
+                        ContactValue = c.ContactValue.Trim(),
                         IsPrimary = c.IsPrimary
                     });
                 }

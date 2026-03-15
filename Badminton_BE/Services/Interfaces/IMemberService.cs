@@ -10,6 +10,7 @@ namespace Badminton_BE.Services.Interfaces
         Task<IEnumerable<MemberReadDto>> GetMembersAsync();
         Task<MemberReadDto?> GetMemberByIdAsync(int id);
         Task<MemberReadDto?> GetMemberByContactValueAsync(string contactValue);
+        Task<MemberLookupDto?> GetMemberLookupByContactAsync(string contactValue);
         Task<bool> UpdateMemberAsync(int id, MemberUpdateDto dto);
         Task<bool> DeleteMemberAsync(int id);
     }

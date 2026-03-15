@@ -28,11 +28,55 @@ namespace Badminton_BE.Repositories
 
         public async Task<Member?> GetByContactValueAsync(string contactValue)
         {
-            // find the member that has a contact with the given value
+            if (string.IsNullOrWhiteSpace(contactValue))
+            {
+                return null;
+            }
+
+            var normalizedContactValue = contactValue.Trim();
+
             return await _db.Members
                 .Include(m => m.Contacts)
-                .Where(m => m.Contacts.Any(c => c.ContactValue == contactValue))
+                .Where(m => m.Contacts.Any(c => c.ContactValue == normalizedContactValue || c.ContactValue.Trim() == normalizedContactValue))
                 .FirstOrDefaultAsync();
+        }
+
+        public async Task<Member?> GetByContactValueIgnoreFiltersAsync(string contactValue)
+        {
+            if (string.IsNullOrWhiteSpace(contactValue))
+            {
+                return null;
+            }
+
+            var normalizedContactValue = contactValue.Trim();
+
+            var memberId = await _db.Contacts
+                .IgnoreQueryFilters()
+                .AsNoTracking()
+                .Where(c => c.ContactValue == normalizedContactValue || c.ContactValue.Trim() == normalizedContactValue)
+                .OrderByDescending(c => c.IsPrimary)
+                .Select(c => (int?)c.MemberId)
+                .FirstOrDefaultAsync();
+
+            if (!memberId.HasValue)
+            {
+                return null;
+            }
+
+            return await _db.Members
+                .IgnoreQueryFilters()
+                .Include(m => m.Contacts)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(m => m.Id == memberId.Value);
+        }
+
+        public async Task<IEnumerable<Member>> GetMembersWithoutPlayerRankingAsync()
+        {
+            return await _db.Members
+                .IgnoreQueryFilters()
+                .AsNoTracking()
+                .Where(m => !_db.RankingsByPlayer.Any(pr => pr.MemberId == m.Id))
+                .ToListAsync();
         }
     }
 }

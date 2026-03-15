@@ -98,6 +98,8 @@ else
 
 // register repositories and services for DI
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
+builder.Services.AddScoped<IRankingRepository, RankingRepository>();
+builder.Services.AddScoped<IPlayerRankingRepository, PlayerRankingRepository>();
 builder.Services.AddScoped<ISessionRepository, SessionRepository>();
 builder.Services.AddScoped<IMemberRepository, MemberRepository>();
 builder.Services.AddScoped<ISessionPlayerRepository, SessionPlayerRepository>();

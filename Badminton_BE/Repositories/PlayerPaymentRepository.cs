@@ -25,5 +25,20 @@ namespace Badminton_BE.Repositories
                 .Where(p => p.SessionPlayer != null && p.SessionPlayer.SessionId == sessionId)
                 .ToListAsync();
         }
+
+        public async Task<IEnumerable<PlayerPayment>> GetBySessionPlayerIdsAsync(IEnumerable<int> sessionPlayerIds)
+        {
+            var ids = sessionPlayerIds.ToList();
+            if (ids.Count == 0)
+            {
+                return Enumerable.Empty<PlayerPayment>();
+            }
+
+            return await _db.PlayerPayments
+                .IgnoreQueryFilters()
+                .AsNoTracking()
+                .Where(p => ids.Contains(p.SessionPlayerId))
+                .ToListAsync();
+        }
     }
 }

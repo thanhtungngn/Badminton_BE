@@ -8,5 +8,6 @@ namespace Badminton_BE.Repositories.Interfaces
     {
         Task<PlayerPayment?> GetBySessionPlayerIdAsync(int sessionPlayerId);
         Task<IEnumerable<PlayerPayment>> GetBySessionIdAsync(int sessionId);
+        Task<IEnumerable<PlayerPayment>> GetBySessionPlayerIdsAsync(IEnumerable<int> sessionPlayerIds);
     }
 }

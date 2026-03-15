@@ -25,6 +25,17 @@ namespace Badminton_BE.Repositories
                 .FirstOrDefaultAsync(sp => sp.Id == id);
         }
 
+        public async Task<IEnumerable<SessionPlayer>> GetByMemberIdWithSessionAsync(int memberId)
+        {
+            return await _db.Set<SessionPlayer>()
+                .IgnoreQueryFilters()
+                .Include(sp => sp.Session)
+                .AsNoTracking()
+                .Where(sp => sp.MemberId == memberId)
+                .OrderByDescending(sp => sp.Session != null ? sp.Session.StartTime : DateTime.MinValue)
+                .ToListAsync();
+        }
+
         public async Task<bool> HasOverlappingSessionAsync(int memberId, DateTime start, DateTime end)
         {
             return await _db.Set<SessionPlayer>()

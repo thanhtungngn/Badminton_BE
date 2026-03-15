@@ -1,18 +1,23 @@
 using System.Linq;
 using System.Threading.Tasks;
-using Badminton_BE.Data;
 using Badminton_BE.Models;
-using Microsoft.EntityFrameworkCore;
 
 namespace Badminton_BE.Services
 {
     public class PlayerRankingService : IPlayerRankingService
     {
-        private readonly AppDbContext _db;
+        private readonly IMemberRepository _memberRepository;
+        private readonly IRankingRepository _rankingRepository;
+        private readonly IPlayerRankingRepository _playerRankingRepository;
 
-        public PlayerRankingService(AppDbContext db)
+        public PlayerRankingService(
+            IMemberRepository memberRepository,
+            IRankingRepository rankingRepository,
+            IPlayerRankingRepository playerRankingRepository)
         {
-            _db = db;
+            _memberRepository = memberRepository;
+            _rankingRepository = rankingRepository;
+            _playerRankingRepository = playerRankingRepository;
         }
 
         public async Task SyncForMemberAsync(Member member)
@@ -23,7 +28,7 @@ namespace Badminton_BE.Services
                 return;
             }
 
-            var playerRanking = await _db.RankingsByPlayer.FirstOrDefaultAsync(x => x.MemberId == member.Id);
+            var playerRanking = await _playerRankingRepository.GetByMemberIdAsync(member.Id);
             if (playerRanking == null)
             {
                 playerRanking = new PlayerRanking
@@ -37,7 +42,7 @@ namespace Badminton_BE.Services
                     Draws = 0
                 };
 
-                await _db.RankingsByPlayer.AddAsync(playerRanking);
+                await _playerRankingRepository.AddAsync(playerRanking);
             }
             else if (playerRanking.MatchesPlayed == 0 && playerRanking.Wins == 0 && playerRanking.Losses == 0 && playerRanking.Draws == 0)
             {
@@ -49,16 +54,13 @@ namespace Badminton_BE.Services
                 playerRanking.RankingId = ranking.Id;
             }
 
-            await _db.SaveChangesAsync();
+            await _playerRankingRepository.SaveChangesAsync();
         }
 
         public async Task<int> BackfillMissingRankingsAsync()
         {
-            var rankings = await _db.Rankings.AsNoTracking().ToListAsync();
-            var membersWithoutRanking = await _db.Members
-                .IgnoreQueryFilters()
-                .Where(m => !_db.RankingsByPlayer.Any(pr => pr.MemberId == m.Id))
-                .ToListAsync();
+            var rankings = await _rankingRepository.GetAllAsync();
+            var membersWithoutRanking = await _memberRepository.GetMembersWithoutPlayerRankingAsync();
 
             var createdCount = 0;
             foreach (var member in membersWithoutRanking)
@@ -69,7 +71,7 @@ namespace Badminton_BE.Services
                     continue;
                 }
 
-                await _db.RankingsByPlayer.AddAsync(new PlayerRanking
+                await _playerRankingRepository.AddAsync(new PlayerRanking
                 {
                     MemberId = member.Id,
                     RankingId = ranking.Id,
@@ -85,7 +87,7 @@ namespace Badminton_BE.Services
 
             if (createdCount > 0)
             {
-                await _db.SaveChangesAsync();
+                await _playerRankingRepository.SaveChangesAsync();
             }
 
             return createdCount;
@@ -93,7 +95,7 @@ namespace Badminton_BE.Services
 
         private async Task<Ranking?> GetRankingForMemberLevelAsync(MemberLevel level)
         {
-            var rankings = await _db.Rankings.AsNoTracking().ToListAsync();
+            var rankings = await _rankingRepository.GetAllAsync();
             return MapMemberLevelToRanking(rankings, level);
         }
 

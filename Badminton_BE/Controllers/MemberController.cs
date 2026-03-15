@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using Badminton_BE.Services;
 using Badminton_BE.DTOs;
 using System.Collections.Generic;
+using Microsoft.AspNetCore.Authorization;
 using Swashbuckle.AspNetCore.Annotations;
 
 namespace Badminton_BE.Controllers
@@ -61,6 +62,24 @@ namespace Badminton_BE.Controllers
             var m = await _service.GetMemberByContactValueAsync(contactValue);
             if (m == null) return NotFound();
             return Ok(m);
+        }
+
+        /// <summary>
+        /// Look up a user's sessions, payment status, elo, and level by one of their contacts.
+        /// </summary>
+        /// <param name="contactValue">Contact value to search for.</param>
+        [AllowAnonymous]
+        [HttpGet("lookup")]
+        [SwaggerResponse(StatusCodes.Status200OK, "Member lookup result", typeof(MemberLookupDto))]
+        [SwaggerResponse(StatusCodes.Status400BadRequest, "Invalid request")]
+        [SwaggerResponse(StatusCodes.Status404NotFound, "Member not found")]
+        public async Task<IActionResult> LookupMember([FromQuery] string contactValue)
+        {
+            if (string.IsNullOrWhiteSpace(contactValue)) return BadRequest("contactValue is required");
+
+            var result = await _service.GetMemberLookupByContactAsync(contactValue);
+            if (result == null) return NotFound();
+            return Ok(result);
         }
 
         /// <summary>
