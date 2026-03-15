@@ -14,19 +14,22 @@ namespace Badminton_BE.Services
         private readonly ISessionPlayerRepository _sessionPlayerRepo;
         private readonly IPlayerPaymentRepository _playerPaymentRepo;
         private readonly IPlayerRankingService _playerRankingService;
+        private readonly IUserRepository _userRepo;
 
         public MemberService(
             IMemberRepository repo,
             IPlayerRankingRepository playerRankingRepo,
             ISessionPlayerRepository sessionPlayerRepo,
             IPlayerPaymentRepository playerPaymentRepo,
-            IPlayerRankingService playerRankingService)
+            IPlayerRankingService playerRankingService,
+            IUserRepository userRepo)
         {
             _repo = repo;
             _playerRankingRepo = playerRankingRepo;
             _sessionPlayerRepo = sessionPlayerRepo;
             _playerPaymentRepo = playerPaymentRepo;
             _playerRankingService = playerRankingService;
+            _userRepo = userRepo;
         }
 
         public async Task<MemberReadDto> CreateMemberAsync(MemberCreateDto dto)
@@ -102,15 +105,7 @@ namespace Badminton_BE.Services
             var payments = (await _playerPaymentRepo.GetBySessionPlayerIdsAsync(sessionPlayers.Select(sp => sp.Id)))
                 .ToDictionary(p => p.SessionPlayerId);
 
-            return new MemberLookupDto
-            {
-                MemberId = member.Id,
-                Name = member.Name,
-                ContactValue = matchedContactValue,
-                Level = member.Level.ToString(),
-                EloPoint = ranking?.EloPoint,
-                RankingName = ranking?.Ranking?.Name,
-                Sessions = sessionPlayers
+            var allSessionDtos = sessionPlayers
                 .Where(sp => sp.Session != null)
                 .Select(sp =>
                 {
@@ -131,7 +126,65 @@ namespace Badminton_BE.Services
                         PaidAt = payment?.PaidAt
                     };
                 })
-                .ToList()
+                .ToList();
+
+            // Build unpaid sessions grouped by session owner (UserId)
+            var unpaidSps = sessionPlayers
+                .Where(sp => sp.Session != null)
+                .Where(sp =>
+                {
+                    payments.TryGetValue(sp.Id, out var p);
+                    return p == null || p.PaidStatus != PaymentStatus.Paid;
+                })
+                .GroupBy(sp => sp.Session!.UserId)
+                .ToList();
+
+            var unpaidByUser = new List<UnpaidSessionsByOwnerDto>();
+            foreach (var group in unpaidSps)
+            {
+                var owner = await _userRepo.GetByIdAsync(group.Key);
+                var groupSessions = group.Select(sp =>
+                {
+                    payments.TryGetValue(sp.Id, out var payment);
+                    return new MemberLookupSessionDto
+                    {
+                        SessionId = sp.Session!.Id,
+                        SessionPlayerId = sp.Id,
+                        Title = sp.Session.Title,
+                        StartTime = sp.Session.StartTime,
+                        EndTime = sp.Session.EndTime,
+                        Address = sp.Session.Address,
+                        SessionStatus = sp.Session.Status.ToString(),
+                        PlayerStatus = sp.Status.ToString(),
+                        PaymentStatus = payment?.PaidStatus.ToString() ?? PaymentStatus.NotPaid.ToString(),
+                        AmountDue = payment?.AmountDue,
+                        AmountPaid = payment?.AmountPaid,
+                        PaidAt = payment?.PaidAt
+                    };
+                }).ToList();
+
+                unpaidByUser.Add(new UnpaidSessionsByOwnerDto
+                {
+                    UserId = group.Key,
+                    OwnerName = owner?.Name ?? owner?.Username ?? string.Empty,
+                    BankAccountNumber = owner?.BankAccountNumber,
+                    BankOwnerName = owner?.BankOwnerName,
+                    BankName = owner?.BankName,
+                    TotalAmountDue = groupSessions.Sum(s => s.AmountDue ?? 0m),
+                    Sessions = groupSessions
+                });
+            }
+
+            return new MemberLookupDto
+            {
+                MemberId = member.Id,
+                Name = member.Name,
+                ContactValue = matchedContactValue,
+                Level = member.Level.ToString(),
+                EloPoint = ranking?.EloPoint,
+                RankingName = ranking?.Ranking?.Name,
+                Sessions = allSessionDtos,
+                UnpaidByUser = unpaidByUser
             };
         }
 

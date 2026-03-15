@@ -12,6 +12,7 @@ namespace Badminton_BE.DTOs
         public int? EloPoint { get; set; }
         public string? RankingName { get; set; }
         public List<MemberLookupSessionDto> Sessions { get; set; } = new List<MemberLookupSessionDto>();
+        public List<UnpaidSessionsByOwnerDto> UnpaidByUser { get; set; } = new List<UnpaidSessionsByOwnerDto>();
     }
 
     public class MemberLookupSessionDto
@@ -28,5 +29,16 @@ namespace Badminton_BE.DTOs
         public decimal? AmountDue { get; set; }
         public decimal? AmountPaid { get; set; }
         public DateTime? PaidAt { get; set; }
+    }
+
+    public class UnpaidSessionsByOwnerDto
+    {
+        public int UserId { get; set; }
+        public string OwnerName { get; set; } = string.Empty;
+        public string? BankAccountNumber { get; set; }
+        public string? BankOwnerName { get; set; }
+        public string? BankName { get; set; }
+        public decimal TotalAmountDue { get; set; }
+        public List<MemberLookupSessionDto> Sessions { get; set; } = new List<MemberLookupSessionDto>();
     }
 }
