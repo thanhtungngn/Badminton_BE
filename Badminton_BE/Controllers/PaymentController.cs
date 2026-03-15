@@ -27,20 +27,13 @@ namespace Badminton_BE.Controllers
             return Ok(sp);
         }
 
-        [HttpPost("session/{sessionId}/generate")]
-        [SwaggerResponse(StatusCodes.Status200OK, "Player payments generated", typeof(object))]
-        public async Task<IActionResult> GeneratePlayerPayments(int sessionId)
-        {
-            var list = await _service.GeneratePlayerPaymentsForSessionAsync(sessionId);
-            return Ok(list);
-        }
 
-        [HttpPost("player/{id}/pay")]
+        [HttpPost("session-player/{sessionPlayerId}/pay")]
         [SwaggerResponse(StatusCodes.Status200OK, "Payment applied", typeof(PlayerPaymentReadDto))]
-        [SwaggerResponse(StatusCodes.Status404NotFound, "Payment not found")]
-        public async Task<IActionResult> PayPlayer(int id, [FromBody] PlayerPaymentPayDto dto)
+        [SwaggerResponse(StatusCodes.Status404NotFound, "Session player or price config not found")]
+        public async Task<IActionResult> PayBySessionPlayer(int sessionPlayerId, [FromBody] PlayerPaymentPayDto dto)
         {
-            var r = await _service.PayPlayerPaymentAsync(id, dto.Amount);
+            var r = await _service.PayBySessionPlayerIdAsync(sessionPlayerId, dto.Amount);
             if (r == null) return NotFound();
             return Ok(r);
         }

@@ -38,6 +38,12 @@ namespace Badminton_BE.Services
                 existing.PriceFemale = priceFemale;
                 _sessionPaymentRepo.Update(existing);
                 await _sessionPaymentRepo.SaveChangesAsync();
+
+                if (session.Status == SessionStatus.OnGoing)
+                {
+                    await GeneratePlayerPaymentsForSessionAsync(sessionId);
+                }
+
                 return existing;
             }
 
@@ -50,6 +56,12 @@ namespace Badminton_BE.Services
 
             await _sessionPaymentRepo.AddAsync(sp);
             await _sessionPaymentRepo.SaveChangesAsync();
+
+            if (session.Status == SessionStatus.OnGoing)
+            {
+                await GeneratePlayerPaymentsForSessionAsync(sessionId);
+            }
+
             return sp;
         }
 
@@ -67,40 +79,80 @@ namespace Badminton_BE.Services
 
             foreach (var sp in session.SessionPlayers)
             {
-                // skip if payment already exists for session player
                 var existing = await _playerPaymentRepo.GetBySessionPlayerIdAsync(sp.Id);
                 if (existing != null) continue;
 
-                decimal due = 0m;
-                if (sp.Member != null)
+                var payment = await EnsurePlayerPaymentForSessionPlayerAsync(sp.Id);
+                if (payment != null)
                 {
-                    // assume Gender enum names Male/Female
-                    due = sp.Member.Gender.ToString().ToLowerInvariant().StartsWith("m") ? spayment.PriceMale : spayment.PriceFemale;
+                    created.Add(payment);
                 }
-
-                var pp = new PlayerPayment
-                {
-                    SessionPlayerId = sp.Id,
-                    AmountDue = due,
-                    AmountPaid = 0m,
-                    PaidStatus = PaymentStatus.NotPaid
-                };
-
-                await _playerPaymentRepo.AddAsync(pp);
-                await _playerPaymentRepo.SaveChangesAsync();
-
-                created.Add(new PlayerPaymentReadDto
-                {
-                    Id = pp.Id,
-                    SessionPlayerId = pp.SessionPlayerId,
-                    AmountDue = pp.AmountDue,
-                    AmountPaid = pp.AmountPaid,
-                    PaidStatus = pp.PaidStatus.ToString(),
-                    PaidAt = pp.PaidAt
-                });
             }
 
             return created;
+        }
+
+        public async Task<PlayerPaymentReadDto?> EnsurePlayerPaymentForSessionPlayerAsync(int sessionPlayerId)
+        {
+            var existing = await _playerPaymentRepo.GetBySessionPlayerIdAsync(sessionPlayerId);
+            if (existing != null)
+            {
+                return new PlayerPaymentReadDto
+                {
+                    Id = existing.Id,
+                    SessionPlayerId = existing.SessionPlayerId,
+                    AmountDue = existing.AmountDue,
+                    AmountPaid = existing.AmountPaid,
+                    PaidStatus = existing.PaidStatus.ToString(),
+                    PaidAt = existing.PaidAt
+                };
+            }
+
+            var sessionPlayer = await _sessionPlayerRepo.GetByIdWithIncludesAsync(sessionPlayerId);
+            if (sessionPlayer?.Session == null)
+            {
+                return null;
+            }
+
+            var spayment = await _sessionPaymentRepo.GetBySessionIdAsync(sessionPlayer.SessionId);
+            if (spayment == null)
+            {
+                return null;
+            }
+
+            decimal due = 0m;
+            if (sessionPlayer.Member != null)
+            {
+                due = sessionPlayer.Member.Gender == Gender.Male ? spayment.PriceMale : spayment.PriceFemale;
+            }
+
+            var pp = new PlayerPayment
+            {
+                SessionPlayerId = sessionPlayer.Id,
+                AmountDue = due,
+                AmountPaid = 0m,
+                PaidStatus = PaymentStatus.NotPaid
+            };
+
+            await _playerPaymentRepo.AddAsync(pp);
+            await _playerPaymentRepo.SaveChangesAsync();
+
+            return new PlayerPaymentReadDto
+            {
+                Id = pp.Id,
+                SessionPlayerId = pp.SessionPlayerId,
+                AmountDue = pp.AmountDue,
+                AmountPaid = pp.AmountPaid,
+                PaidStatus = pp.PaidStatus.ToString(),
+                PaidAt = pp.PaidAt
+            };
+        }
+
+        public async Task<PlayerPaymentReadDto?> PayBySessionPlayerIdAsync(int sessionPlayerId, decimal amount)
+        {
+            var pp = await EnsurePlayerPaymentForSessionPlayerAsync(sessionPlayerId);
+            if (pp == null) return null;
+            return await PayPlayerPaymentAsync(pp.Id, amount);
         }
 
         public async Task<PlayerPaymentReadDto?> PayPlayerPaymentAsync(int playerPaymentId, decimal amount)

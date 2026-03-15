@@ -9,6 +9,8 @@ namespace Badminton_BE.Services.Interfaces
     {
         Task<SessionPayment?> SetSessionPricesAsync(int sessionId, decimal priceMale, decimal priceFemale);
         Task<IEnumerable<PlayerPaymentReadDto>> GeneratePlayerPaymentsForSessionAsync(int sessionId);
+        Task<PlayerPaymentReadDto?> EnsurePlayerPaymentForSessionPlayerAsync(int sessionPlayerId);
         Task<PlayerPaymentReadDto?> PayPlayerPaymentAsync(int playerPaymentId, decimal amount);
+        Task<PlayerPaymentReadDto?> PayBySessionPlayerIdAsync(int sessionPlayerId, decimal amount);
     }
 }

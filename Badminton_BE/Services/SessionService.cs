@@ -13,12 +13,14 @@ namespace Badminton_BE.Services
         private readonly ISessionRepository _repo;
         private readonly IPlayerPaymentRepository _playerPaymentRepo;
         private readonly ISessionPaymentRepository _sessionPaymentRepo;
+        private readonly IPaymentService _paymentService;
 
-        public SessionService(ISessionRepository repo, IPlayerPaymentRepository playerPaymentRepo, ISessionPaymentRepository sessionPaymentRepo)
+        public SessionService(ISessionRepository repo, IPlayerPaymentRepository playerPaymentRepo, ISessionPaymentRepository sessionPaymentRepo, IPaymentService paymentService)
         {
             _repo = repo;
             _playerPaymentRepo = playerPaymentRepo;
             _sessionPaymentRepo = sessionPaymentRepo;
+            _paymentService = paymentService;
         }
 
         public async Task<SessionWithPlayersDto?> GetSessionDetailAsync(int id)
@@ -195,6 +197,8 @@ namespace Badminton_BE.Services
             var existing = await _repo.GetByIdAsync(id);
             if (existing == null) return false;
 
+            var previousStatus = existing.Status;
+
             existing.Title = dto.Title ?? existing.Title;
             existing.Description = dto.Title ?? dto.Description;
             existing.StartTime = dto.StartTime ?? existing.StartTime;
@@ -209,6 +213,11 @@ namespace Badminton_BE.Services
 
             _repo.Update(existing);
             await _repo.SaveChangesAsync();
+
+            if (previousStatus != SessionStatus.OnGoing && existing.Status == SessionStatus.OnGoing)
+            {
+                await _paymentService.GeneratePlayerPaymentsForSessionAsync(existing.Id);
+            }
 
             return true;
         }

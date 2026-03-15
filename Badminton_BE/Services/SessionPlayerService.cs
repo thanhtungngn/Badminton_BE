@@ -10,12 +10,14 @@ namespace Badminton_BE.Services
         private readonly ISessionPlayerRepository _repo;
         private readonly ISessionRepository _sessionRepo;
         private readonly IMemberRepository _memberRepo;
+        private readonly IPaymentService _paymentService;
 
-        public SessionPlayerService(ISessionPlayerRepository repo, ISessionRepository sessionRepo, IMemberRepository memberRepo)
+        public SessionPlayerService(ISessionPlayerRepository repo, ISessionRepository sessionRepo, IMemberRepository memberRepo, IPaymentService paymentService)
         {
             _repo = repo;
             _sessionRepo = sessionRepo;
             _memberRepo = memberRepo;
+            _paymentService = paymentService;
         }
 
         public async Task<SessionPlayerReadDto?> AddMemberToSessionAsync(SessionPlayerCreateDto dto)
