@@ -20,6 +20,8 @@ namespace Badminton_BE.DTOs
         public int Id { get; set; }
         public int SessionId { get; set; }
         public int MemberId { get; set; }
+        public string Level { get; set; } = string.Empty;
+        public int? EloPoint { get; set; }
         public SessionPlayerStatus Status { get; set; }
         public DateTime CreatedDate { get; set; }
         public DateTime? UpdatedDate { get; set; }

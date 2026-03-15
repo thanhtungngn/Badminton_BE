@@ -52,6 +52,9 @@ namespace Badminton_BE.DTOs
         [JsonPropertyName("level")]
         public string Level { get; set; } = string.Empty;
 
+        [JsonPropertyName("eloPoint")]
+        public int? EloPoint { get; set; }
+
         [JsonPropertyName("isReturning")]
         public bool? IsReturning { get; set; }
 

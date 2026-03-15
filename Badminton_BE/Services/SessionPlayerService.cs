@@ -49,14 +49,22 @@ namespace Badminton_BE.Services
             await _repo.AddAsync(sp);
             await _repo.SaveChangesAsync();
 
+            var created = await _repo.GetByIdWithIncludesAsync(sp.Id);
+            if (created == null)
+            {
+                return null;
+            }
+
             return new SessionPlayerReadDto
             {
-                Id = sp.Id,
-                SessionId = sp.SessionId,
-                MemberId = sp.MemberId,
-                Status = sp.Status,
-                CreatedDate = sp.CreatedDate,
-                UpdatedDate = sp.UpdatedDate
+                Id = created.Id,
+                SessionId = created.SessionId,
+                MemberId = created.MemberId,
+                Level = created.Member?.Level.ToString() ?? string.Empty,
+                EloPoint = created.Member?.PlayerRanking?.EloPoint,
+                Status = created.Status,
+                CreatedDate = created.CreatedDate,
+                UpdatedDate = created.UpdatedDate
             };
         }
 
@@ -81,6 +89,8 @@ namespace Badminton_BE.Services
                 Id = sp.Id,
                 SessionId = sp.SessionId,
                 MemberId = sp.MemberId,
+                Level = sp.Member?.Level.ToString() ?? string.Empty,
+                EloPoint = sp.Member?.PlayerRanking?.EloPoint,
                 Status = sp.Status,
                 CreatedDate = sp.CreatedDate,
                 UpdatedDate = sp.UpdatedDate
@@ -98,3 +108,4 @@ namespace Badminton_BE.Services
         }
     }
 }
+                                         

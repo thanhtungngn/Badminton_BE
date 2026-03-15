@@ -27,6 +27,9 @@ namespace Badminton_BE.Repositories
                 .Include(s => s.SessionPlayers!)
                     .ThenInclude(sp => sp.Member)
                         .ThenInclude(m => m.Contacts)
+                .Include(s => s.SessionPlayers!)
+                    .ThenInclude(sp => sp.Member)
+                        .ThenInclude(m => m.PlayerRanking)
                 .FirstOrDefaultAsync(s => s.Id == id);
         }
     }

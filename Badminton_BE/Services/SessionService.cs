@@ -71,6 +71,7 @@ namespace Badminton_BE.Services
                         Name = sp.Member.Name,
                         Contact = contact,
                         Level = sp.Member.Level.ToString(),
+                        EloPoint = sp.Member.PlayerRanking?.EloPoint,
                         PaidStatus = payment != null ? (payment.PaidStatus == PaymentStatus.Paid) : (bool?)null,
                         Price = price
                     });

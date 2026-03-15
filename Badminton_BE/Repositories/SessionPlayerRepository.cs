@@ -13,6 +13,7 @@ namespace Badminton_BE.Repositories
         {
             return await _db.Set<SessionPlayer>()
                 .Include(sp => sp.Member)
+                    .ThenInclude(m => m.PlayerRanking)
                 .Include(sp => sp.Session)
                 .FirstOrDefaultAsync(sp => sp.SessionId == sessionId && sp.MemberId == memberId);
         }
@@ -21,6 +22,7 @@ namespace Badminton_BE.Repositories
         {
             return await _db.Set<SessionPlayer>()
                 .Include(sp => sp.Member)
+                    .ThenInclude(m => m.PlayerRanking)
                 .Include(sp => sp.Session)
                 .FirstOrDefaultAsync(sp => sp.Id == id);
         }
