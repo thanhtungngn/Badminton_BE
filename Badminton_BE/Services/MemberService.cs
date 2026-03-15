@@ -10,10 +10,12 @@ namespace Badminton_BE.Services
     public class MemberService : IMemberService
     {
         private readonly IMemberRepository _repo;
+        private readonly IPlayerRankingService _playerRankingService;
 
-        public MemberService(IMemberRepository repo)
+        public MemberService(IMemberRepository repo, IPlayerRankingService playerRankingService)
         {
             _repo = repo;
+            _playerRankingService = playerRankingService;
         }
 
         public async Task<MemberReadDto> CreateMemberAsync(MemberCreateDto dto)
@@ -42,6 +44,7 @@ namespace Badminton_BE.Services
 
             await _repo.AddAsync(member);
             await _repo.SaveChangesAsync();
+            await _playerRankingService.SyncForMemberAsync(member);
 
             return MapToReadDto(member);
         }
@@ -94,6 +97,7 @@ namespace Badminton_BE.Services
 
             _repo.Update(existing);
             await _repo.SaveChangesAsync();
+            await _playerRankingService.SyncForMemberAsync(existing);
 
             return true;
         }

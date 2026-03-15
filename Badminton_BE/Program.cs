@@ -113,6 +113,7 @@ builder.Services.AddScoped<ISessionPaymentRepository, SessionPaymentRepository>(
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+builder.Services.AddScoped<IPlayerRankingService, PlayerRankingService>();
 // Learn more about configuring Swagger at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
@@ -213,6 +214,10 @@ try
             {
                 migrationLogger?.LogInformation("Database provider is not relational; skipping migrations.");
             }
+
+            var playerRankingService = services.GetRequiredService<IPlayerRankingService>();
+            var migratedCount = await playerRankingService.BackfillMissingRankingsAsync();
+            migrationLogger?.LogInformation("Backfilled player rankings for {Count} members.", migratedCount);
         }
         catch (Exception ex)
         {

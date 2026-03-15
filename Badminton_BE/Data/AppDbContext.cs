@@ -11,7 +11,8 @@ namespace Badminton_BE.Data
     public class AppDbContext : DbContext
     {
         private readonly ICurrentUserService _currentUserService;
-        private int? CurrentUserId => _currentUserService.UserId;
+        private bool HasCurrentUserId => _currentUserService.UserId.HasValue;
+        private int CurrentUserIdOrDefault => _currentUserService.UserId ?? 0;
 
         public AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUserService? currentUserService = null)
             : base(options)
@@ -23,6 +24,8 @@ namespace Badminton_BE.Data
         public DbSet<Member> Members => Set<Member>();
         public DbSet<AppUser> Users => Set<AppUser>();
         public DbSet<Contact> Contacts => Set<Contact>();
+        public DbSet<Ranking> Rankings => Set<Ranking>();
+        public DbSet<PlayerRanking> RankingsByPlayer => Set<PlayerRanking>();
         public DbSet<SessionPlayer> SessionPlayers => Set<SessionPlayer>();
         public DbSet<SessionPayment> SessionPayments => Set<SessionPayment>();
         public DbSet<PlayerPayment> PlayerPayments => Set<PlayerPayment>();
@@ -44,7 +47,7 @@ namespace Badminton_BE.Data
                 b.Property(s => s.PaymentQrCodeUrl).HasMaxLength(1000);
                 // store enum as string in database
                 b.Property(s => s.Status).HasConversion<string>().IsRequired();
-                b.HasQueryFilter(s => !CurrentUserId.HasValue || s.UserId == CurrentUserId.Value);
+                b.HasQueryFilter(s => !HasCurrentUserId || s.UserId == CurrentUserIdOrDefault);
             });
 
             modelBuilder.Entity<SessionPayment>(b =>
@@ -60,7 +63,7 @@ namespace Badminton_BE.Data
                     .WithOne()
                     .HasForeignKey<SessionPayment>(sp => sp.SessionId)
                     .OnDelete(DeleteBehavior.Cascade);
-                b.HasQueryFilter(sp => !CurrentUserId.HasValue || sp.UserId == CurrentUserId.Value);
+                b.HasQueryFilter(sp => !HasCurrentUserId || sp.UserId == CurrentUserIdOrDefault);
             });
 
             modelBuilder.Entity<PlayerPayment>(b =>
@@ -77,7 +80,7 @@ namespace Badminton_BE.Data
                     .WithMany()
                     .HasForeignKey(p => p.SessionPlayerId)
                     .OnDelete(DeleteBehavior.Cascade);
-                b.HasQueryFilter(p => !CurrentUserId.HasValue || p.UserId == CurrentUserId.Value);
+                b.HasQueryFilter(p => !HasCurrentUserId || p.UserId == CurrentUserIdOrDefault);
             });
 
             modelBuilder.Entity<Member>(b =>
@@ -95,7 +98,51 @@ namespace Badminton_BE.Data
                     .WithOne(c => c.Member)
                     .HasForeignKey(c => c.MemberId)
                     .OnDelete(DeleteBehavior.Cascade);
-                b.HasQueryFilter(m => !CurrentUserId.HasValue || m.UserId == CurrentUserId.Value);
+
+                b.HasOne(m => m.PlayerRanking)
+                    .WithOne(pr => pr.Member)
+                    .HasForeignKey<PlayerRanking>(pr => pr.MemberId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                b.HasQueryFilter(m => !HasCurrentUserId || m.UserId == CurrentUserIdOrDefault);
+            });
+
+            modelBuilder.Entity<Ranking>(b =>
+            {
+                b.HasKey(r => r.Id);
+                b.Property(r => r.Name).IsRequired().HasMaxLength(100);
+                b.Property(r => r.DefaultEloPoint).IsRequired();
+                b.Property(r => r.SortOrder).IsRequired();
+                b.HasIndex(r => r.Name).IsUnique();
+
+                var seedTime = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+                b.HasData(
+                    new Ranking { Id = 1, Name = "Newbie", DefaultEloPoint = 0, SortOrder = 1, CreatedDate = seedTime },
+                    new Ranking { Id = 2, Name = "Yếu", DefaultEloPoint = 300, SortOrder = 2, CreatedDate = seedTime },
+                    new Ranking { Id = 3, Name = "Trung bình yếu", DefaultEloPoint = 500, SortOrder = 3, CreatedDate = seedTime },
+                    new Ranking { Id = 4, Name = "Trung bình", DefaultEloPoint = 1000, SortOrder = 4, CreatedDate = seedTime },
+                    new Ranking { Id = 5, Name = "Trung bình khá", DefaultEloPoint = 1700, SortOrder = 5, CreatedDate = seedTime },
+                    new Ranking { Id = 6, Name = "Khá", DefaultEloPoint = 2500, SortOrder = 6, CreatedDate = seedTime },
+                    new Ranking { Id = 7, Name = "Giỏi", DefaultEloPoint = 3500, SortOrder = 7, CreatedDate = seedTime }
+                );
+            });
+
+            modelBuilder.Entity<PlayerRanking>(b =>
+            {
+                b.HasKey(pr => pr.Id);
+                b.Property(pr => pr.MemberId).IsRequired();
+                b.Property(pr => pr.RankingId).IsRequired();
+                b.Property(pr => pr.EloPoint).IsRequired();
+                b.Property(pr => pr.MatchesPlayed).IsRequired();
+                b.Property(pr => pr.Wins).IsRequired();
+                b.Property(pr => pr.Losses).IsRequired();
+                b.Property(pr => pr.Draws).IsRequired();
+                b.HasIndex(pr => pr.MemberId).IsUnique();
+
+                b.HasOne(pr => pr.Ranking)
+                    .WithMany(r => r.PlayerRankings)
+                    .HasForeignKey(pr => pr.RankingId)
+                    .OnDelete(DeleteBehavior.Restrict);
             });
 
             modelBuilder.Entity<AppUser>(b =>
@@ -133,7 +180,7 @@ namespace Badminton_BE.Data
                 b.Property(c => c.ContactType).HasConversion<string>().IsRequired();
                 b.Property(c => c.ContactValue).IsRequired().HasMaxLength(500);
                 b.Property(c => c.IsPrimary).IsRequired();
-                b.HasQueryFilter(c => !CurrentUserId.HasValue || c.UserId == CurrentUserId.Value);
+                b.HasQueryFilter(c => !HasCurrentUserId || c.UserId == CurrentUserIdOrDefault);
             });
 
             modelBuilder.Entity<SessionPlayer>(b =>
@@ -154,7 +201,7 @@ namespace Badminton_BE.Data
                     .WithMany(m => m.SessionPlayers)
                     .HasForeignKey(sp => sp.MemberId)
                     .OnDelete(DeleteBehavior.Cascade);
-                b.HasQueryFilter(sp => !CurrentUserId.HasValue || sp.UserId == CurrentUserId.Value);
+                b.HasQueryFilter(sp => !HasCurrentUserId || sp.UserId == CurrentUserIdOrDefault);
             });
         }
 
@@ -173,6 +220,7 @@ namespace Badminton_BE.Data
         private void UpdateTimestamps()
         {
             var utcNow = DateTime.UtcNow;
+            var currentUserId = _currentUserService.UserId;
 
             var entries = ChangeTracker.Entries()
                 .Where(e => e.Entity is IEntity && (e.State == EntityState.Added || e.State == EntityState.Modified));
@@ -186,9 +234,9 @@ namespace Badminton_BE.Data
                     // set CreatedDate on add
                     entity.CreatedDate = utcNow;
 
-                    if (entry.Entity is IUserOwnedEntity ownedEntity && CurrentUserId.HasValue && ownedEntity.UserId == 0)
+                    if (entry.Entity is IUserOwnedEntity ownedEntity && currentUserId.HasValue && ownedEntity.UserId == 0)
                     {
-                        ownedEntity.UserId = CurrentUserId.Value;
+                        ownedEntity.UserId = currentUserId.Value;
                     }
                 }
 
