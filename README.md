@@ -68,6 +68,48 @@ Example: create a member with `curl`:
 
 `curl -X POST http://localhost:5000/api/member -H "Content-Type: application/json" -d '{"firstName":"Jane","lastName":"Doe","contact": {"email":"jane@example.com"}}'`
 
+## MCP Server (Badminton_MCP)
+
+`Badminton_MCP` is a companion [Model Context Protocol](https://modelcontextprotocol.io) server that lets AI assistants (Claude Desktop, Cline, Cursor, etc.) interact with the Badminton_BE API.
+
+### Quick start
+
+1. Start the Badminton_BE API first (see above).
+2. Run the MCP server:
+   ```bash
+   cd Badminton_MCP
+   BADMINTON_API_URL=http://localhost:5000 dotnet run
+   ```
+
+### Claude Desktop configuration
+
+Add this to your `claude_desktop_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "badminton": {
+      "command": "dotnet",
+      "args": ["run", "--project", "/absolute/path/to/Badminton_MCP"],
+      "env": {
+        "BADMINTON_API_URL": "https://your-api-host"
+      }
+    }
+  }
+}
+```
+
+### Available tools
+
+| Category | Tools |
+|----------|-------|
+| Auth | `Login`, `Logout`, `Register`, `GetProfile` |
+| Members | `GetMembers`, `GetMember`, `GetMemberByContact`, `LookupMember`, `CreateMember`, `UpdateMember`, `DeleteMember` |
+| Sessions | `GetSessions`, `GetActiveSessions`, `GetSession`, `GetSessionDetail`, `CreateSession`, `UpdateSession`, `DeleteSession`, `RegisterPublic` |
+| Session Players | `AddMemberToSession`, `GetSessionPlayer`, `UpdateSessionPlayerStatus`, `RemoveFromSession` |
+| Matches | `GetMatches`, `GetMatch`, `CreateMatch`, `UpdateMatch`, `DeleteMatch` |
+| Payments | `SetSessionPrices`, `PaySessionPlayer` |
+
 ## Contributing
 
 - Follow the existing code style in `Badminton_BE`.

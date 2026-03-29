@@ -215,6 +215,23 @@ Current rule in the codebase:
 - Swagger metadata is already present on controllers.
 - JWT revocation is supported through `RevokedToken`.
 
+## 8. MCP Server (`Badminton_MCP`)
+A companion MCP (Model Context Protocol) server is available in the `Badminton_MCP/` project.
+
+Current capabilities:
+- Exposes all Badminton_BE REST API operations as MCP tools
+- Communicates via stdio transport (compatible with Claude Desktop, Cline, Cursor, etc.)
+- Reads the API base URL from the `BADMINTON_API_URL` environment variable
+- Stores the JWT token in memory for authenticated calls
+
+Tool categories:
+- Auth: `Login`, `Logout`, `Register`, `GetProfile`
+- Members: `GetMembers`, `GetMember`, `GetMemberByContact`, `LookupMember`, `CreateMember`, `UpdateMember`, `DeleteMember`
+- Sessions: `GetSessions`, `GetActiveSessions`, `GetSession`, `GetSessionDetail`, `CreateSession`, `UpdateSession`, `DeleteSession`, `RegisterPublic`
+- Session Players: `AddMemberToSession`, `GetSessionPlayer`, `UpdateSessionPlayerStatus`, `RemoveFromSession`
+- Matches: `GetMatches`, `GetMatch`, `CreateMatch`, `UpdateMatch`, `DeleteMatch`
+- Payments: `SetSessionPrices`, `PaySessionPlayer`
+
 ## Suggested Next Documentation Files
 If needed, this `docs` folder can be expanded with:
 - `docs/api-endpoints.md`
