@@ -24,6 +24,26 @@ namespace Badminton_BE.Repositories
                 .ToListAsync();
         }
 
+        public async Task<IEnumerable<SessionMatch>> GetByMemberIdAsync(int memberId, int? ownerUserId = null)
+        {
+            var query = _db.SessionMatches
+                .Include(m => m.Players)
+                    .ThenInclude(p => p.SessionPlayer)
+                        .ThenInclude(sp => sp.Member)
+                            .ThenInclude(m => m.PlayerRanking)
+                .AsNoTracking()
+                .Where(m => m.Players.Any(p => p.SessionPlayer != null && p.SessionPlayer.MemberId == memberId));
+
+            if (ownerUserId.HasValue)
+            {
+                query = query.Where(m => m.UserId == ownerUserId.Value);
+            }
+
+            return await query
+                .OrderByDescending(m => m.CreatedDate)
+                .ToListAsync();
+        }
+
         public async Task<SessionMatch?> GetByIdWithPlayersAsync(int id)
         {
             return await _db.SessionMatches

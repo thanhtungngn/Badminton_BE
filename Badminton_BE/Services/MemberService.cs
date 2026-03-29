@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Badminton_BE.DTOs;
@@ -12,6 +12,7 @@ namespace Badminton_BE.Services
         private readonly IMemberRepository _repo;
         private readonly IPlayerRankingRepository _playerRankingRepo;
         private readonly ISessionPlayerRepository _sessionPlayerRepo;
+        private readonly ISessionMatchRepository _sessionMatchRepo;
         private readonly IPlayerPaymentRepository _playerPaymentRepo;
         private readonly IPlayerRankingService _playerRankingService;
         private readonly IUserRepository _userRepo;
@@ -21,6 +22,7 @@ namespace Badminton_BE.Services
             IMemberRepository repo,
             IPlayerRankingRepository playerRankingRepo,
             ISessionPlayerRepository sessionPlayerRepo,
+            ISessionMatchRepository sessionMatchRepo,
             IPlayerPaymentRepository playerPaymentRepo,
             IPlayerRankingService playerRankingService,
             IUserRepository userRepo,
@@ -29,6 +31,7 @@ namespace Badminton_BE.Services
             _repo = repo;
             _playerRankingRepo = playerRankingRepo;
             _sessionPlayerRepo = sessionPlayerRepo;
+            _sessionMatchRepo = sessionMatchRepo;
             _playerPaymentRepo = playerPaymentRepo;
             _playerRankingService = playerRankingService;
             _userRepo = userRepo;
@@ -78,6 +81,11 @@ namespace Badminton_BE.Services
             if (m == null) return null;
 
             var dto = MapToReadDto(m);
+            var stats = await BuildMatchStatsAsync(m.Id, _currentUserService.UserId);
+            dto.Wins = stats.Wins;
+            dto.Losses = stats.Losses;
+            dto.Draws = stats.Draws;
+            dto.WinRate = stats.WinRate;
             dto.UnpaidByUser = await BuildUnpaidByUserAsync(m.Id, _currentUserService.UserId);
             return dto;
         }
@@ -88,6 +96,11 @@ namespace Badminton_BE.Services
             if (m == null) return null;
 
             var dto = MapToReadDto(m);
+            var stats = await BuildMatchStatsAsync(m.Id, _currentUserService.UserId);
+            dto.Wins = stats.Wins;
+            dto.Losses = stats.Losses;
+            dto.Draws = stats.Draws;
+            dto.WinRate = stats.WinRate;
             dto.UnpaidByUser = await BuildUnpaidByUserAsync(m.Id, _currentUserService.UserId);
             return dto;
         }
@@ -119,6 +132,8 @@ namespace Badminton_BE.Services
                 .Select(sp => MapToLookupSessionDto(sp, payments))
                 .ToList();
 
+            var lookupStats = await BuildMatchStatsAsync(member.Id);
+
             return new MemberLookupDto
             {
                 MemberId = member.Id,
@@ -127,6 +142,10 @@ namespace Badminton_BE.Services
                 Level = member.Level.ToString(),
                 EloPoint = ranking?.EloPoint,
                 RankingName = ranking?.Ranking?.Name,
+                Wins = lookupStats.Wins,
+                Losses = lookupStats.Losses,
+                Draws = lookupStats.Draws,
+                WinRate = lookupStats.WinRate,
                 Sessions = allSessionDtos,
                 UnpaidByUser = await BuildUnpaidByUserAsync(sessionPlayers, payments)
             };
@@ -194,6 +213,44 @@ namespace Badminton_BE.Services
                     ContactValue = c.ContactValue,
                     IsPrimary = c.IsPrimary
                 }).ToList()
+            };
+        }
+
+        private async Task<MemberMatchStatsDto> BuildMatchStatsAsync(int memberId, int? ownerUserId = null)
+        {
+            var matches = (await _sessionMatchRepo.GetByMemberIdAsync(memberId, ownerUserId))
+                .Where(m => m.Winner != MatchWinner.Pending)
+                .ToList();
+
+            if (matches.Count == 0)
+            {
+                return new MemberMatchStatsDto();
+            }
+
+            var wins = 0;
+            var losses = 0;
+            var draws = 0;
+
+            foreach (var match in matches)
+            {
+                var player = match.Players.FirstOrDefault(p => p.SessionPlayer?.MemberId == memberId);
+                if (player == null) continue;
+
+                if (match.Winner == MatchWinner.Draw) { draws++; continue; }
+
+                var isWin = (player.Team == MatchTeam.TeamA && match.Winner == MatchWinner.TeamA)
+                    || (player.Team == MatchTeam.TeamB && match.Winner == MatchWinner.TeamB);
+
+                if (isWin) wins++;
+                else losses++;
+            }
+
+            return new MemberMatchStatsDto
+            {
+                Wins = wins,
+                Losses = losses,
+                Draws = draws,
+                WinRate = decimal.Round(wins * 100m / matches.Count, 2)
             };
         }
 
