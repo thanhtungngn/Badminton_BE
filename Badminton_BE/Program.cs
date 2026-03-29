@@ -109,6 +109,7 @@ builder.Services.AddScoped<IRevokedTokenRepository, RevokedTokenRepository>();
 
 builder.Services.AddScoped<ISessionService, SessionService>();
 builder.Services.AddScoped<ISessionMatchService, SessionMatchService>();
+builder.Services.AddScoped<IEloRewardService, EloRewardService>();
 builder.Services.AddScoped<IMemberService, MemberService>();
 builder.Services.AddScoped<ISessionPlayerService, SessionPlayerService>();
 builder.Services.AddScoped<ISessionPaymentRepository, SessionPaymentRepository>();

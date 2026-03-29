@@ -24,6 +24,7 @@ namespace Badminton_BE.Models
         public int TeamAScore { get; set; }
         public int TeamBScore { get; set; }
         public MatchWinner Winner { get; set; } = MatchWinner.Pending;
+        public bool IsEloApplied { get; set; }
 
         public ICollection<SessionMatchPlayer> Players { get; set; } = new List<SessionMatchPlayer>();
     }

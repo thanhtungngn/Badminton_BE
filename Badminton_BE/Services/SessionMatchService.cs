@@ -12,15 +12,18 @@ namespace Badminton_BE.Services
         private readonly ISessionMatchRepository _matchRepo;
         private readonly ISessionRepository _sessionRepo;
         private readonly ISessionPlayerRepository _sessionPlayerRepo;
+        private readonly IEloRewardService _eloRewardService;
 
         public SessionMatchService(
             ISessionMatchRepository matchRepo,
             ISessionRepository sessionRepo,
-            ISessionPlayerRepository sessionPlayerRepo)
+            ISessionPlayerRepository sessionPlayerRepo,
+            IEloRewardService eloRewardService)
         {
             _matchRepo = matchRepo;
             _sessionRepo = sessionRepo;
             _sessionPlayerRepo = sessionPlayerRepo;
+            _eloRewardService = eloRewardService;
         }
 
         public async Task<IEnumerable<SessionMatchReadDto>> GetBySessionIdAsync(int sessionId)
@@ -63,7 +66,12 @@ namespace Badminton_BE.Services
             await _matchRepo.SaveChangesAsync();
 
             var created = await _matchRepo.GetByIdWithPlayersAsync(match.Id);
-            return created == null ? null : MapToReadDto(created);
+            if (created == null) return null;
+
+            await _eloRewardService.ApplyAsync(created);
+            await _matchRepo.SaveChangesAsync();
+
+            return MapToReadDto(created);
         }
 
         public async Task<SessionMatchReadDto?> UpdateAsync(int sessionId, int matchId, SessionMatchUpsertDto dto)
@@ -80,6 +88,9 @@ namespace Badminton_BE.Services
                 return null;
             }
 
+            // Reverse old Elo before replacing players
+            await _eloRewardService.ReverseAsync(match);
+
             match.TeamAScore = dto.TeamAScore;
             match.TeamBScore = dto.TeamBScore;
             match.Winner = dto.Winner;
@@ -93,7 +104,12 @@ namespace Badminton_BE.Services
             await _matchRepo.SaveChangesAsync();
 
             var updated = await _matchRepo.GetByIdWithPlayersAsync(match.Id);
-            return updated == null ? null : MapToReadDto(updated);
+            if (updated == null) return null;
+
+            await _eloRewardService.ApplyAsync(updated);
+            await _matchRepo.SaveChangesAsync();
+
+            return MapToReadDto(updated);
         }
 
         public async Task<bool> DeleteAsync(int sessionId, int matchId)
@@ -104,6 +120,7 @@ namespace Badminton_BE.Services
                 return false;
             }
 
+            await _eloRewardService.ReverseAsync(match);
             _matchRepo.Remove(match);
             await _matchRepo.SaveChangesAsync();
             return true;

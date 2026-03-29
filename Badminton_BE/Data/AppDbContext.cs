@@ -215,6 +215,7 @@ namespace Badminton_BE.Data
                 b.Property(sm => sm.TeamAScore).IsRequired();
                 b.Property(sm => sm.TeamBScore).IsRequired();
                 b.Property(sm => sm.Winner).HasConversion<string>().IsRequired();
+                b.Property(sm => sm.IsEloApplied).IsRequired().HasDefaultValue(false);
 
                 b.HasOne(sm => sm.Session)
                     .WithMany(s => s.Matches)
@@ -231,6 +232,7 @@ namespace Badminton_BE.Data
                 b.Property(smp => smp.SessionMatchId).IsRequired();
                 b.Property(smp => smp.SessionPlayerId).IsRequired();
                 b.Property(smp => smp.Team).HasConversion<string>().IsRequired();
+                b.Property(smp => smp.EloChange).IsRequired().HasDefaultValue(0);
                 b.HasIndex(smp => new { smp.SessionMatchId, smp.SessionPlayerId }).IsUnique();
 
                 b.HasOne(smp => smp.SessionMatch)

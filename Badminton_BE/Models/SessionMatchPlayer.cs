@@ -22,5 +22,6 @@ namespace Badminton_BE.Models
         public SessionPlayer? SessionPlayer { get; set; }
 
         public MatchTeam Team { get; set; }
+        public int EloChange { get; set; }
     }
 }
