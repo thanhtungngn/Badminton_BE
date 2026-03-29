@@ -15,6 +15,8 @@ namespace Badminton_BE.Repositories
         {
             return await _db.Members
                 .Include(m => m.Contacts)
+                .Include(m => m.PlayerRanking)
+                    .ThenInclude(pr => pr.Ranking)
                 .AsNoTracking()
                 .ToListAsync();
         }
@@ -23,6 +25,8 @@ namespace Badminton_BE.Repositories
         {
             return await _db.Members
                 .Include(m => m.Contacts)
+                .Include(m => m.PlayerRanking)
+                    .ThenInclude(pr => pr.Ranking)
                 .FirstOrDefaultAsync(m => m.Id == id);
         }
 
@@ -68,6 +72,38 @@ namespace Badminton_BE.Repositories
                 .Include(m => m.Contacts)
                 .AsNoTracking()
                 .FirstOrDefaultAsync(m => m.Id == memberId.Value);
+        }
+
+        public async Task<Member?> GetByPhoneNumberForUserIgnoreFiltersAsync(int userId, string phoneNumber)
+        {
+            if (string.IsNullOrWhiteSpace(phoneNumber))
+            {
+                return null;
+            }
+
+            var normalizedPhoneNumber = phoneNumber.Trim();
+
+            var memberId = await _db.Contacts
+                .IgnoreQueryFilters()
+                .AsNoTracking()
+                .Where(c => c.UserId == userId
+                    && c.ContactType == ContactType.Phone
+                    && (c.ContactValue == normalizedPhoneNumber || c.ContactValue.Trim() == normalizedPhoneNumber))
+                .OrderByDescending(c => c.IsPrimary)
+                .Select(c => (int?)c.MemberId)
+                .FirstOrDefaultAsync();
+
+            if (!memberId.HasValue)
+            {
+                return null;
+            }
+
+            return await _db.Members
+                .IgnoreQueryFilters()
+                .Include(m => m.Contacts)
+                .Include(m => m.PlayerRanking)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(m => m.Id == memberId.Value && m.UserId == userId);
         }
 
         public async Task<IEnumerable<Member>> GetMembersWithoutPlayerRankingAsync()

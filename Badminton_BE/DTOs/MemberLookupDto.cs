@@ -11,6 +11,10 @@ namespace Badminton_BE.DTOs
         public string Level { get; set; } = string.Empty;
         public int? EloPoint { get; set; }
         public string? RankingName { get; set; }
+        public int Wins { get; set; }
+        public int Losses { get; set; }
+        public int Draws { get; set; }
+        public decimal WinRate { get; set; }
         public List<MemberLookupSessionDto> Sessions { get; set; } = new List<MemberLookupSessionDto>();
         public List<UnpaidSessionsByOwnerDto> UnpaidByUser { get; set; } = new List<UnpaidSessionsByOwnerDto>();
     }

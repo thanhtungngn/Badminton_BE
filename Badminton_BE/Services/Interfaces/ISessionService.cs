@@ -11,6 +11,7 @@ namespace Badminton_BE.Services.Interfaces
         Task<IEnumerable<SessionReadDto>> GetActiveSessionsAsync();
         Task<SessionReadDto?> GetSessionByIdAsync(int id);
         Task<SessionWithPlayersDto?> GetSessionDetailAsync(int id);
+        Task<PublicSessionRegistrationResultDto> RegisterPublicAsync(int sessionId, PublicSessionRegistrationDto dto);
         Task<bool> UpdateSessionAsync(int id, SessionUpdateDto dto);
         Task<bool> DeleteSessionAsync(int id);
     }

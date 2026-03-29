@@ -28,5 +28,6 @@ namespace Badminton_BE.Models
         public string? PaymentQrCodeUrl { get; set; }
 
         public ICollection<SessionPlayer> SessionPlayers { get; set; } = new List<SessionPlayer>();
+        public ICollection<SessionMatch> Matches { get; set; } = new List<SessionMatch>();
     }
 }
