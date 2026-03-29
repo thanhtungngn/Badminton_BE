@@ -70,6 +70,7 @@ Current capabilities:
 - Get active sessions for dashboard
 - Get session by id
 - Get detailed session info with players
+- Get detailed session info with matches
 - Update session
 - Delete session
 
@@ -91,7 +92,40 @@ Session detail currently includes player data such as:
 - paid status
 - calculated price
 
-## 4. Session Player Management
+Session detail also includes match data such as:
+- team A players
+- team B players
+- match score
+- winner
+
+## 4. Match Management
+Handled by `SessionMatchController`, `SessionMatchService`, and `SessionMatchRepository`.
+
+Current capabilities:
+- Create a match inside a session
+- Get all matches of a session
+- Get a single match by id
+- Update match teams, score, and winner
+- Delete a match
+- Validate team sizes from 1 to 2 players per team
+- Validate all players belong to the same session
+- Validate winner matches the score when provided
+
+Main endpoints:
+- `GET /api/session/{sessionId}/matches`
+- `GET /api/session/{sessionId}/matches/{matchId}`
+- `POST /api/session/{sessionId}/matches`
+- `PUT /api/session/{sessionId}/matches/{matchId}`
+- `DELETE /api/session/{sessionId}/matches/{matchId}`
+
+Each match currently supports:
+- team A with 1 to 2 players
+- team B with 1 to 2 players
+- team A score
+- team B score
+- winner
+
+## 5. Session Player Management
 Handled by `SessionPlayerController` and `SessionPlayerService`.
 
 Current capabilities:
@@ -116,7 +150,7 @@ Session-player response currently includes:
 - status
 - timestamps
 
-## 5. Payment Management
+## 6. Payment Management
 Handled by `PaymentController` and `PaymentService`.
 
 Current capabilities:
@@ -136,7 +170,7 @@ Player payments are created automatically when:
 
 There is no longer a public endpoint for manual bulk payment generation.
 
-## 6. Ranking System
+## 7. Ranking System
 Handled by ranking repositories and services.
 
 Current capabilities:
@@ -157,6 +191,8 @@ Main entities in the application:
 - `Contact`
 - `Session`
 - `SessionPlayer`
+- `SessionMatch`
+- `SessionMatchPlayer`
 - `SessionPayment`
 - `PlayerPayment`
 - `Ranking`

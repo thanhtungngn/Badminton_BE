@@ -123,9 +123,32 @@ Important:
 - if a player is added after the session has already started, that player payment is also generated automatically
 - if prices are set after a session is already `OnGoing`, missing payments are generated automatically
 
+## Match Workflow
+
+### Step 10: Create matches inside the session
+Once players have joined a session, you can create matches for that session.
+
+Endpoints:
+- `GET /api/session/{sessionId}/matches`
+- `GET /api/session/{sessionId}/matches/{matchId}`
+- `POST /api/session/{sessionId}/matches`
+- `PUT /api/session/{sessionId}/matches/{matchId}`
+- `DELETE /api/session/{sessionId}/matches/{matchId}`
+
+Each match supports:
+- team A with 1 or 2 session players
+- team B with 1 or 2 session players
+- match score
+- winner
+
+Rules:
+- a player must already belong to the session before being used in a match
+- a player cannot appear on both teams in the same match
+- the winner should match the final score
+
 ## Payment Workflow
 
-### Step 10: Track player payments
+### Step 11: Track player payments
 Once a player has a `SessionPlayer` record, payment can be applied using that id.
 
 Endpoint:
@@ -136,7 +159,7 @@ Behavior:
 - partial payment is supported
 - full payment marks the payment as paid
 
-### Step 11: Review session detail
+### Step 12: Review session detail
 Use the session detail endpoint to review players in a session.
 
 Endpoint:
@@ -151,9 +174,15 @@ Current player detail includes:
 - paid status
 - calculated price
 
+Session detail also includes:
+- matches in the session
+- players on team A and team B
+- scores
+- winner
+
 ## Player Lookup Workflow
 
-### Step 12: Look up a player by contact
+### Step 13: Look up a player by contact
 This flow is designed for quick player lookup using contact information.
 
 Endpoint:
@@ -179,8 +208,9 @@ A practical daily flow for organizers is:
 4. set session prices
 5. add players to the session
 6. change session status to `OnGoing` when it starts
-7. collect payments using `sessionPlayerId`
-8. review session detail and player payment status
+7. create and update matches during the session
+8. collect payments using `sessionPlayerId`
+9. review session detail and player payment status
 
 ## Important Notes
 - Data is tenant-isolated by authenticated user.

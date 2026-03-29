@@ -27,6 +27,8 @@ namespace Badminton_BE.Data
         public DbSet<Ranking> Rankings => Set<Ranking>();
         public DbSet<PlayerRanking> RankingsByPlayer => Set<PlayerRanking>();
         public DbSet<SessionPlayer> SessionPlayers => Set<SessionPlayer>();
+        public DbSet<SessionMatch> SessionMatches => Set<SessionMatch>();
+        public DbSet<SessionMatchPlayer> SessionMatchPlayers => Set<SessionMatchPlayer>();
         public DbSet<SessionPayment> SessionPayments => Set<SessionPayment>();
         public DbSet<PlayerPayment> PlayerPayments => Set<PlayerPayment>();
         public DbSet<RevokedToken> RevokedTokens => Set<RevokedToken>();
@@ -202,6 +204,45 @@ namespace Badminton_BE.Data
                     .HasForeignKey(sp => sp.MemberId)
                     .OnDelete(DeleteBehavior.Cascade);
                 b.HasQueryFilter(sp => !HasCurrentUserId || sp.UserId == CurrentUserIdOrDefault);
+            });
+
+            modelBuilder.Entity<SessionMatch>(b =>
+            {
+                b.HasKey(sm => sm.Id);
+                b.Property(sm => sm.UserId).IsRequired();
+                b.HasIndex(sm => sm.UserId);
+                b.Property(sm => sm.SessionId).IsRequired();
+                b.Property(sm => sm.TeamAScore).IsRequired();
+                b.Property(sm => sm.TeamBScore).IsRequired();
+                b.Property(sm => sm.Winner).HasConversion<string>().IsRequired();
+
+                b.HasOne(sm => sm.Session)
+                    .WithMany(s => s.Matches)
+                    .HasForeignKey(sm => sm.SessionId)
+                    .OnDelete(DeleteBehavior.Cascade);
+                b.HasQueryFilter(sm => !HasCurrentUserId || sm.UserId == CurrentUserIdOrDefault);
+            });
+
+            modelBuilder.Entity<SessionMatchPlayer>(b =>
+            {
+                b.HasKey(smp => smp.Id);
+                b.Property(smp => smp.UserId).IsRequired();
+                b.HasIndex(smp => smp.UserId);
+                b.Property(smp => smp.SessionMatchId).IsRequired();
+                b.Property(smp => smp.SessionPlayerId).IsRequired();
+                b.Property(smp => smp.Team).HasConversion<string>().IsRequired();
+                b.HasIndex(smp => new { smp.SessionMatchId, smp.SessionPlayerId }).IsUnique();
+
+                b.HasOne(smp => smp.SessionMatch)
+                    .WithMany(sm => sm.Players)
+                    .HasForeignKey(smp => smp.SessionMatchId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                b.HasOne(smp => smp.SessionPlayer)
+                    .WithMany()
+                    .HasForeignKey(smp => smp.SessionPlayerId)
+                    .OnDelete(DeleteBehavior.Restrict);
+                b.HasQueryFilter(smp => !HasCurrentUserId || smp.UserId == CurrentUserIdOrDefault);
             });
         }
 

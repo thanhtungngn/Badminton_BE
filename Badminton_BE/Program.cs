@@ -101,12 +101,14 @@ builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 builder.Services.AddScoped<IRankingRepository, RankingRepository>();
 builder.Services.AddScoped<IPlayerRankingRepository, PlayerRankingRepository>();
 builder.Services.AddScoped<ISessionRepository, SessionRepository>();
+builder.Services.AddScoped<ISessionMatchRepository, SessionMatchRepository>();
 builder.Services.AddScoped<IMemberRepository, MemberRepository>();
 builder.Services.AddScoped<ISessionPlayerRepository, SessionPlayerRepository>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IRevokedTokenRepository, RevokedTokenRepository>();
 
 builder.Services.AddScoped<ISessionService, SessionService>();
+builder.Services.AddScoped<ISessionMatchService, SessionMatchService>();
 builder.Services.AddScoped<IMemberService, MemberService>();
 builder.Services.AddScoped<ISessionPlayerService, SessionPlayerService>();
 builder.Services.AddScoped<ISessionPaymentRepository, SessionPaymentRepository>();

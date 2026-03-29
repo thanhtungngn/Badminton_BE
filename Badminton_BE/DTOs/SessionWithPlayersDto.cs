@@ -28,6 +28,9 @@ namespace Badminton_BE.DTOs
         [JsonPropertyName("players")]
         public List<PlayerResponseDto> Players { get; set; } = new List<PlayerResponseDto>();
 
+        [JsonPropertyName("matches")]
+        public List<SessionMatchReadDto> Matches { get; set; } = new List<SessionMatchReadDto>();
+
         [JsonPropertyName("createdAt")]
         public DateTime CreatedAt { get; set; }
         

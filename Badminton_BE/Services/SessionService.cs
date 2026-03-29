@@ -93,6 +93,14 @@ namespace Badminton_BE.Services
                 }
             }
 
+            if (s.Matches != null)
+            {
+                dto.Matches = s.Matches
+                    .OrderByDescending(m => m.CreatedDate)
+                    .Select(MapToMatchDto)
+                    .ToList();
+            }
+
             return dto;
         }
 
@@ -383,6 +391,42 @@ namespace Badminton_BE.Services
             await _repo.SaveChangesAsync();
 
             return true;
+        }
+
+        private static SessionMatchReadDto MapToMatchDto(SessionMatch match)
+        {
+            return new SessionMatchReadDto
+            {
+                Id = match.Id,
+                SessionId = match.SessionId,
+                TeamAScore = match.TeamAScore,
+                TeamBScore = match.TeamBScore,
+                Winner = match.Winner,
+                TeamAPlayers = match.Players
+                    .Where(p => p.Team == MatchTeam.TeamA)
+                    .OrderBy(p => p.Id)
+                    .Select(MapToMatchPlayerDto)
+                    .ToList(),
+                TeamBPlayers = match.Players
+                    .Where(p => p.Team == MatchTeam.TeamB)
+                    .OrderBy(p => p.Id)
+                    .Select(MapToMatchPlayerDto)
+                    .ToList(),
+                CreatedDate = match.CreatedDate,
+                UpdatedDate = match.UpdatedDate
+            };
+        }
+
+        private static SessionMatchPlayerReadDto MapToMatchPlayerDto(SessionMatchPlayer player)
+        {
+            return new SessionMatchPlayerReadDto
+            {
+                SessionPlayerId = player.SessionPlayerId,
+                MemberId = player.SessionPlayer?.MemberId ?? 0,
+                Name = player.SessionPlayer?.Member?.Name ?? string.Empty,
+                Level = player.SessionPlayer?.Member?.Level.ToString() ?? string.Empty,
+                EloPoint = player.SessionPlayer?.Member?.PlayerRanking?.EloPoint
+            };
         }
     }
 }
