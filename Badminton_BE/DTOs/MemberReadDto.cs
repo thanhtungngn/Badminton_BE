@@ -15,5 +15,6 @@ namespace Badminton_BE.DTOs
         public DateTime CreatedDate { get; set; }
         public DateTime? UpdatedDate { get; set; }
         public List<ContactReadDto> Contacts { get; set; } = new List<ContactReadDto>();
+        public List<UnpaidSessionsByOwnerDto> UnpaidByUser { get; set; } = new List<UnpaidSessionsByOwnerDto>();
     }
 }
