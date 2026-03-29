@@ -206,6 +206,8 @@ namespace Badminton_BE.Services
                 Avatar = m.Avatar,
                 CreatedDate = m.CreatedDate,
                 UpdatedDate = m.UpdatedDate,
+                EloPoint = m.PlayerRanking?.EloPoint,
+                RankingName = m.PlayerRanking?.Ranking?.Name,
                 Contacts = m.Contacts.Select(c => new DTOs.ContactReadDto
                 {
                     Id = c.Id,

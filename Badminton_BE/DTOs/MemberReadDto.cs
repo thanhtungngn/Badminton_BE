@@ -15,6 +15,8 @@ namespace Badminton_BE.DTOs
         public DateTime CreatedDate { get; set; }
         public DateTime? UpdatedDate { get; set; }
         public List<ContactReadDto> Contacts { get; set; } = new List<ContactReadDto>();
+        public int? EloPoint { get; set; }
+        public string? RankingName { get; set; }
         public int Wins { get; set; }
         public int Losses { get; set; }
         public int Draws { get; set; }

@@ -15,6 +15,8 @@ namespace Badminton_BE.Repositories
         {
             return await _db.Members
                 .Include(m => m.Contacts)
+                .Include(m => m.PlayerRanking)
+                    .ThenInclude(pr => pr.Ranking)
                 .AsNoTracking()
                 .ToListAsync();
         }
@@ -23,6 +25,8 @@ namespace Badminton_BE.Repositories
         {
             return await _db.Members
                 .Include(m => m.Contacts)
+                .Include(m => m.PlayerRanking)
+                    .ThenInclude(pr => pr.Ranking)
                 .FirstOrDefaultAsync(m => m.Id == id);
         }
 
