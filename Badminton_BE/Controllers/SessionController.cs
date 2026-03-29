@@ -4,6 +4,7 @@ using Swashbuckle.AspNetCore.Annotations;
 using System.Threading.Tasks;
 using System.Linq;
 using System.Collections.Generic;
+using Microsoft.AspNetCore.Authorization;
 using Badminton_BE.Repositories;
 using Badminton_BE.Services;
 using Badminton_BE.DTOs;
@@ -86,6 +87,30 @@ namespace Badminton_BE.Controllers
             var detail = await _service.GetSessionDetailAsync(id);
             if (detail == null) return NotFound();
             return Ok(detail);
+        }
+
+        /// <summary>
+        /// Public registration endpoint for joining a session by name, gender, and phone number.
+        /// </summary>
+        [AllowAnonymous]
+        [HttpPost("{id}/register")]
+        [SwaggerResponse(StatusCodes.Status201Created, "Registration completed", typeof(PublicSessionRegistrationResultDto))]
+        [SwaggerResponse(StatusCodes.Status400BadRequest, "Invalid request")]
+        [SwaggerResponse(StatusCodes.Status404NotFound, "Session not found")]
+        [SwaggerResponse(StatusCodes.Status409Conflict, "Already registered or overlapping session")]
+        public async Task<IActionResult> RegisterPublic(int id, [FromBody] PublicSessionRegistrationDto dto)
+        {
+            if (!ModelState.IsValid) return BadRequest(ModelState);
+
+            var result = await _service.RegisterPublicAsync(id, dto);
+
+            return result.RegistrationStatus switch
+            {
+                PublicSessionRegistrationStatus.SessionNotFound => NotFound(result.Message),
+                PublicSessionRegistrationStatus.AlreadyRegistered => Conflict(result.Message),
+                PublicSessionRegistrationStatus.OverlappingSession => Conflict(result.Message),
+                _ => StatusCode(StatusCodes.Status201Created, result)
+            };
         }
 
         /// <summary>

@@ -11,16 +11,29 @@ namespace Badminton_BE.Services
     public class SessionService : ISessionService
     {
         private readonly ISessionRepository _repo;
+        private readonly IMemberRepository _memberRepo;
+        private readonly ISessionPlayerRepository _sessionPlayerRepo;
         private readonly IPlayerPaymentRepository _playerPaymentRepo;
         private readonly ISessionPaymentRepository _sessionPaymentRepo;
         private readonly IPaymentService _paymentService;
+        private readonly IPlayerRankingService _playerRankingService;
 
-        public SessionService(ISessionRepository repo, IPlayerPaymentRepository playerPaymentRepo, ISessionPaymentRepository sessionPaymentRepo, IPaymentService paymentService)
+        public SessionService(
+            ISessionRepository repo,
+            IMemberRepository memberRepo,
+            ISessionPlayerRepository sessionPlayerRepo,
+            IPlayerPaymentRepository playerPaymentRepo,
+            ISessionPaymentRepository sessionPaymentRepo,
+            IPaymentService paymentService,
+            IPlayerRankingService playerRankingService)
         {
             _repo = repo;
+            _memberRepo = memberRepo;
+            _sessionPlayerRepo = sessionPlayerRepo;
             _playerPaymentRepo = playerPaymentRepo;
             _sessionPaymentRepo = sessionPaymentRepo;
             _paymentService = paymentService;
+            _playerRankingService = playerRankingService;
         }
 
         public async Task<SessionWithPlayersDto?> GetSessionDetailAsync(int id)
@@ -189,6 +202,125 @@ namespace Badminton_BE.Services
                 MaxPlayerPerCourt = s.MaxPlayerPerCourt,
                 PriceMale = spayment?.PriceMale,
                 PriceFemale = spayment?.PriceFemale
+            };
+        }
+
+        public async Task<PublicSessionRegistrationResultDto> RegisterPublicAsync(int sessionId, PublicSessionRegistrationDto dto)
+        {
+            var session = await _repo.GetByIdAsync(sessionId);
+            if (session == null)
+            {
+                return new PublicSessionRegistrationResultDto
+                {
+                    RegistrationStatus = PublicSessionRegistrationStatus.SessionNotFound,
+                    SessionId = sessionId,
+                    Name = dto.Name?.Trim() ?? string.Empty,
+                    PhoneNumber = dto.PhoneNumber?.Trim() ?? string.Empty,
+                    Message = "Session not found."
+                };
+            }
+
+            var normalizedName = dto.Name.Trim();
+            var normalizedPhoneNumber = dto.PhoneNumber.Trim();
+
+            var member = await _memberRepo.GetByPhoneNumberForUserIgnoreFiltersAsync(session.UserId, normalizedPhoneNumber);
+            var isNewMember = false;
+
+            if (member == null)
+            {
+                var newMember = new Member
+                {
+                    UserId = session.UserId,
+                    Name = normalizedName,
+                    Gender = dto.Gender,
+                    Level = MemberLevel.LowerIntermediate,
+                    JoinDate = DateTime.UtcNow,
+                    Contacts = new List<Contact>
+                    {
+                        new Contact
+                        {
+                            UserId = session.UserId,
+                            ContactType = ContactType.Phone,
+                            ContactValue = normalizedPhoneNumber,
+                            IsPrimary = true
+                        }
+                    }
+                };
+
+                await _memberRepo.AddAsync(newMember);
+                await _memberRepo.SaveChangesAsync();
+                await _playerRankingService.SyncForMemberAsync(newMember);
+
+                member = await _memberRepo.GetByIdWithContactsAsync(newMember.Id) ?? newMember;
+                isNewMember = true;
+            }
+
+            var existingRegistration = await _sessionPlayerRepo.GetBySessionAndMemberAsync(sessionId, member.Id);
+            if (existingRegistration != null)
+            {
+                return new PublicSessionRegistrationResultDto
+                {
+                    RegistrationStatus = PublicSessionRegistrationStatus.AlreadyRegistered,
+                    SessionId = sessionId,
+                    SessionPlayerId = existingRegistration.Id,
+                    MemberId = member.Id,
+                    Name = member.Name,
+                    PhoneNumber = normalizedPhoneNumber,
+                    Level = member.Level.ToString(),
+                    EloPoint = member.PlayerRanking?.EloPoint,
+                    Message = "This phone number is already registered for the session."
+                };
+            }
+
+            if (session.StartTime != default && session.EndTime != default)
+            {
+                var hasOverlap = await _sessionPlayerRepo.HasOverlappingSessionAsync(member.Id, session.StartTime, session.EndTime);
+                if (hasOverlap)
+                {
+                    return new PublicSessionRegistrationResultDto
+                    {
+                        RegistrationStatus = PublicSessionRegistrationStatus.OverlappingSession,
+                        SessionId = sessionId,
+                        MemberId = member.Id,
+                        Name = member.Name,
+                        PhoneNumber = normalizedPhoneNumber,
+                        Level = member.Level.ToString(),
+                        EloPoint = member.PlayerRanking?.EloPoint,
+                        Message = "This player already joined another overlapping active session."
+                    };
+                }
+            }
+
+            var sessionPlayer = new SessionPlayer
+            {
+                UserId = session.UserId,
+                SessionId = sessionId,
+                MemberId = member.Id,
+                Status = SessionPlayerStatus.Joined
+            };
+
+            await _sessionPlayerRepo.AddAsync(sessionPlayer);
+            await _sessionPlayerRepo.SaveChangesAsync();
+
+            if (session.Status == SessionStatus.OnGoing)
+            {
+                await _paymentService.EnsurePlayerPaymentForSessionPlayerAsync(sessionPlayer.Id);
+            }
+
+            var createdRegistration = await _sessionPlayerRepo.GetByIdWithIncludesAsync(sessionPlayer.Id);
+
+            return new PublicSessionRegistrationResultDto
+            {
+                RegistrationStatus = PublicSessionRegistrationStatus.Registered,
+                IsNewMember = isNewMember,
+                SessionId = sessionId,
+                SessionPlayerId = sessionPlayer.Id,
+                MemberId = member.Id,
+                Name = member.Name,
+                PhoneNumber = normalizedPhoneNumber,
+                Level = createdRegistration?.Member?.Level.ToString() ?? member.Level.ToString(),
+                EloPoint = createdRegistration?.Member?.PlayerRanking?.EloPoint ?? member.PlayerRanking?.EloPoint,
+                Message = isNewMember ? "Registration completed and a new member was created." : "Registration completed successfully."
             };
         }
 
