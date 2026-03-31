@@ -72,9 +72,14 @@ namespace Badminton_BE.Services
                     }
 
                     var payment = await _playerPaymentRepo.GetBySessionPlayerIdAsync(sp.Id);
-                    // determine price based on member gender and configured session prices
+                    // use the player's individual AmountDue if a payment record exists,
+                    // otherwise fall back to the session-level price based on gender
                     decimal price = 0m;
-                    if (sessionPayment != null)
+                    if (payment != null)
+                    {
+                        price = payment.AmountDue;
+                    }
+                    else if (sessionPayment != null)
                     {
                         price = sp.Member.Gender == Gender.Male ? sessionPayment.PriceMale : sessionPayment.PriceFemale;
                     }
@@ -88,6 +93,7 @@ namespace Badminton_BE.Services
                         Level = sp.Member.Level.ToString(),
                         EloPoint = sp.Member.PlayerRanking?.EloPoint,
                         PaidStatus = payment != null ? (payment.PaidStatus == PaymentStatus.Paid) : (bool?)null,
+                        PlayerPaymentId = payment?.Id,
                         Price = price
                     });
                 }

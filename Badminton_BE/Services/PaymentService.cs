@@ -155,6 +155,44 @@ namespace Badminton_BE.Services
             return await PayPlayerPaymentAsync(pp.Id, amount);
         }
 
+        public async Task<PlayerPaymentReadDto?> UpdateAmountDueAsync(int sessionPlayerId, decimal newAmountDue)
+        {
+            var pp = await _playerPaymentRepo.GetBySessionPlayerIdAsync(sessionPlayerId);
+            if (pp == null) return null;
+
+            pp.AmountDue = newAmountDue;
+
+            if (pp.AmountPaid >= pp.AmountDue)
+            {
+                pp.PaidStatus = PaymentStatus.Paid;
+                if (pp.PaidAt == null)
+                    pp.PaidAt = System.DateTime.UtcNow;
+            }
+            else if (pp.AmountPaid > 0)
+            {
+                pp.PaidStatus = PaymentStatus.Partial;
+                pp.PaidAt = null;
+            }
+            else
+            {
+                pp.PaidStatus = PaymentStatus.NotPaid;
+                pp.PaidAt = null;
+            }
+
+            _playerPaymentRepo.Update(pp);
+            await _playerPaymentRepo.SaveChangesAsync();
+
+            return new PlayerPaymentReadDto
+            {
+                Id = pp.Id,
+                SessionPlayerId = pp.SessionPlayerId,
+                AmountDue = pp.AmountDue,
+                AmountPaid = pp.AmountPaid,
+                PaidStatus = pp.PaidStatus.ToString(),
+                PaidAt = pp.PaidAt
+            };
+        }
+
         public async Task<PlayerPaymentReadDto?> PayPlayerPaymentAsync(int playerPaymentId, decimal amount)
         {
             var pp = await _playerPaymentRepo.GetByIdAsync(playerPaymentId);
