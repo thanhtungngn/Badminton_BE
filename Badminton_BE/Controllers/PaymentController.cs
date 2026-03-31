@@ -37,5 +37,15 @@ namespace Badminton_BE.Controllers
             if (r == null) return NotFound();
             return Ok(r);
         }
+
+        [HttpPut("session-player/{sessionPlayerId}/amount")]
+        [SwaggerResponse(StatusCodes.Status200OK, "Amount due updated", typeof(PlayerPaymentReadDto))]
+        [SwaggerResponse(StatusCodes.Status404NotFound, "Player payment not found")]
+        public async Task<IActionResult> UpdatePlayerPaymentAmount(int sessionPlayerId, [FromBody] PlayerPaymentUpdateAmountDto dto)
+        {
+            var r = await _service.UpdateAmountDueAsync(sessionPlayerId, dto.AmountDue);
+            if (r == null) return NotFound();
+            return Ok(r);
+        }
     }
 }

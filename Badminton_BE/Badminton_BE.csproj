@@ -38,6 +38,9 @@
     <None Include="..\docs\releases\v1.0.1.md">
       <Link>docs\releases\v1.0.1.md</Link>
     </None>
+	  <None Include="..\docs\releases\v1.0.2.md">
+		  <Link>docs\releases\v1.0.2.md</Link>
+	  </None>
   </ItemGroup>
 
 

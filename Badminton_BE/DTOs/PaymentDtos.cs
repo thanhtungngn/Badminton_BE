@@ -26,4 +26,11 @@ namespace Badminton_BE.DTOs
         [Required]
         public decimal Amount { get; set; }
     }
+
+    public class PlayerPaymentUpdateAmountDto
+    {
+        [Required]
+        [Range(0, double.MaxValue, ErrorMessage = "AmountDue must be a non-negative value.")]
+        public decimal AmountDue { get; set; }
+    }
 }
