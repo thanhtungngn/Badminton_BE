@@ -8,3 +8,26 @@ services:
     plan: free
     # Do NOT store secrets here. Set database and other secrets in Render Dashboard environment variables.
     envVars: []
+
+  - type: web
+    name: badminton-mcp
+    env: docker
+    dockerfilePath: ./Dockerfile.mcp
+    branch: master
+    autoDeploy: true
+    plan: free
+    # Set all secrets in Render Dashboard environment variables, not here.
+    envVars:
+      - key: BADMINTON_API_URL
+        sync: false
+      - key: BADMINTON_API_TOKEN
+        sync: false
+      - key: TRELLO_API_KEY
+        sync: false
+      - key: TRELLO_TOKEN
+        sync: false
+      - key: TRELLO_BOARD_ID
+        sync: false
+      - key: TRELLO_MEMBER_ID
+        sync: false
+
