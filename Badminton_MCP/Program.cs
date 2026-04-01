@@ -8,7 +8,7 @@ builder.Services.AddSingleton<BadmintonApiClient>();
 builder.Services.AddSingleton<TrelloClient>();
 
 builder.Services.AddMcpServer()
-    .WithHttpTransport()
+    .WithHttpTransport(options => options.Stateless = true)
     .WithToolsFromAssembly();
 
 var app = builder.Build();
