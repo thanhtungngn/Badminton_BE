@@ -365,3 +365,9 @@ FodyWeavers.xsd
 .elasticbeanstalk/*
 !.elasticbeanstalk/*.cfg.yml
 !.elasticbeanstalk/*.global.yml
+
+# Local Trello test credentials - never commit real values
+trello.runsettings
+
+# Local MCP config - contains real credentials
+.mcp.json

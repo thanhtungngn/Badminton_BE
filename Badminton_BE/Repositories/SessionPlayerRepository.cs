@@ -52,5 +52,12 @@ namespace Badminton_BE.Repositories
                     (sp.Session.Status == SessionStatus.Upcoming || sp.Session.Status == SessionStatus.OnGoing)
                 );
         }
+
+        public async Task<int> CountActiveBySessionAsync(int sessionId)
+        {
+            return await _db.Set<SessionPlayer>()
+                .Where(sp => sp.SessionId == sessionId && sp.Status != SessionPlayerStatus.Canceled)
+                .CountAsync();
+        }
     }
 }

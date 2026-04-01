@@ -41,6 +41,14 @@ namespace Badminton_BE.Services
                 if (hasOverlap) return null;
             }
 
+            // prevent joining when session is full (NumberOfCourts × MaxPlayerPerCourt)
+            if (session.MaxPlayerPerCourt.HasValue)
+            {
+                var maxPlayers = session.NumberOfCourts * session.MaxPlayerPerCourt.Value;
+                var activeCount = await _repo.CountActiveBySessionAsync(dto.SessionId);
+                if (activeCount >= maxPlayers) return null;
+            }
+
             var sp = new SessionPlayer
             {
                 SessionId = dto.SessionId,
