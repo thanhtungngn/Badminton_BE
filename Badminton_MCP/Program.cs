@@ -13,6 +13,6 @@ builder.Services.AddMcpServer()
 
 var app = builder.Build();
 
-app.MapMcp();
+app.MapMcp("/");
 
 await app.RunAsync();
