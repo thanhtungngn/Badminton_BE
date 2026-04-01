@@ -1,48 +1,56 @@
-# Badminton_BE Current State
+# Badminton Project — Current State (v1.1.0)
 
-## Overview
-`Badminton_BE` is an ASP.NET Core Web API for managing badminton sessions, members, rankings, payments, and user authentication.
+## Solution Overview
 
-## Tech Stack
+The solution (`Badminton_BE.slnx`) contains three projects:
+
+| Project | Type | Version | Purpose |
+|---------|------|---------|---------|
+| `Badminton_BE` | ASP.NET Core Web API | 1.1.0 | Core backend — sessions, members, payments, rankings |
+| `Badminton_MCP` | .NET 10 Console (MCP Server) | 1.1.0 | AI tooling — exposes Trello and Badminton API tools to GitHub Copilot |
+| `Badminton_MCP.Tests` | xUnit Test Project | — | Integration tests for the MCP server's Trello connection |
+
+---
+
+## Badminton_BE — API Backend
+
+### Tech Stack
 - `.NET 10`
 - `ASP.NET Core Web API`
-- `Entity Framework Core`
-- `Pomelo.EntityFrameworkCore.MySql`
-- `JWT` authentication
-- `Swagger / Swashbuckle`
-
-## Main Functional Areas
+- `Entity Framework Core` with `Pomelo.EntityFrameworkCore.MySql`
+- `JWT` authentication with token revocation
+- `Swagger / Swashbuckle` with XML doc comments
 
 ### 1. Authentication and User Profile
 Handled by `AuthController` and `AuthService`.
 
-Current capabilities:
+Capabilities:
 - Register account
 - Login and receive JWT
 - Logout by revoking token
 - Get current user profile
 - Update current user profile
 
-Main endpoints:
+Endpoints:
 - `POST /api/auth/register`
 - `POST /api/auth/login`
 - `POST /api/auth/logout`
 - `GET /api/auth/profile`
 - `PUT /api/auth/profile`
 
-## 2. Member Management
+### 2. Member Management
 Handled by `MemberController`, `MemberService`, and `MemberRepository`.
 
-Current capabilities:
+Capabilities:
 - Create member with contacts
-- Get all members
-- Get member by id
+- Get all members — response includes `Wins`, `Losses`, `Draws`, `WinRate` per member *(fixed in v1.1.0)*
+- Get member by id — includes full match stats and unpaid session debt per owning user
 - Get member by contact value
 - Update member and replace contacts
 - Delete member
-- Anonymous lookup by contact to retrieve player/session information
+- Anonymous lookup by contact — returns sessions, payment status, ranking
 
-Main endpoints:
+Endpoints:
 - `POST /api/member`
 - `GET /api/member`
 - `GET /api/member/{id}`
@@ -51,20 +59,17 @@ Main endpoints:
 - `PUT /api/member/{id}`
 - `DELETE /api/member/{id}`
 
-Lookup response currently includes:
-- member id
-- name
-- contact value
-- level
-- elo point
-- ranking name
-- joined sessions
-- payment status per session
+`GET /api/member` response includes per member:
+- id, name, gender, level, joinDate, avatar
+- contacts
+- eloPoint, rankingName
+- wins, losses, draws, winRate
+- unpaidByUser (debt grouped by session owner)
 
-## 3. Session Management
+### 3. Session Management
 Handled by `SessionController` and `SessionService`.
 
-Current capabilities:
+Capabilities:
 - Create session
 - Get all sessions
 - Get active sessions for dashboard
@@ -74,7 +79,7 @@ Current capabilities:
 - Update session
 - Delete session
 
-Main endpoints:
+Endpoints:
 - `POST /api/session`
 - `GET /api/session`
 - `GET /api/session/dashboard`
@@ -83,142 +88,153 @@ Main endpoints:
 - `PUT /api/session/{id}`
 - `DELETE /api/session/{id}`
 
-Session detail currently includes player data such as:
-- member id
-- name
-- contact
-- level
-- elo point
-- paid status
-- calculated price
+Session detail includes player data:
+- member id, name, contact, level, elo point, paid status, calculated price
 
-Session detail also includes match data such as:
-- team A players
-- team B players
-- match score
-- winner
+Session detail includes match data:
+- team A and B players, scores, winner
 
-## 4. Match Management
+### 4. Match Management
 Handled by `SessionMatchController`, `SessionMatchService`, and `SessionMatchRepository`.
 
-Current capabilities:
+Capabilities:
 - Create a match inside a session
 - Get all matches of a session
 - Get a single match by id
 - Update match teams, score, and winner
 - Delete a match
-- Validate team sizes from 1 to 2 players per team
+- Validate team sizes (1–2 players per team)
 - Validate all players belong to the same session
-- Validate winner matches the score when provided
+- Validate winner is consistent with score when provided
 
-Main endpoints:
+Endpoints:
 - `GET /api/session/{sessionId}/matches`
 - `GET /api/session/{sessionId}/matches/{matchId}`
 - `POST /api/session/{sessionId}/matches`
 - `PUT /api/session/{sessionId}/matches/{matchId}`
 - `DELETE /api/session/{sessionId}/matches/{matchId}`
 
-Each match currently supports:
-- team A with 1 to 2 players
-- team B with 1 to 2 players
-- team A score
-- team B score
-- winner
-
-## 5. Session Player Management
+### 5. Session Player Management
 Handled by `SessionPlayerController` and `SessionPlayerService`.
 
-Current capabilities:
+Capabilities:
 - Add member to session
 - Get session-player record by id
 - Update session-player status
 - Remove member from session
 - Prevent duplicate member in same session
 - Prevent overlapping upcoming/ongoing sessions for the same member
+- Enforce session capacity: blocks join when `activeCount >= NumberOfCourts × MaxPlayerPerCourt` *(added in v1.1.0)*
 
-Main endpoints:
+Endpoints:
 - `POST /api/sessionplayer`
 - `GET /api/sessionplayer/{id}`
 - `PATCH /api/sessionplayer/{id}/status`
 - `DELETE /api/sessionplayer/{id}`
 
-Session-player response currently includes:
-- session id
-- member id
-- level
-- elo point
-- status
-- timestamps
+`SessionPlayerStatus` values: `Joined`, `Canceled`, `Paid`, `NotPaid`
 
-## 6. Payment Management
+### 6. Payment Management
 Handled by `PaymentController` and `PaymentService`.
 
-Current capabilities:
+Capabilities:
 - Set session pricing for male/female players
 - Pay by `sessionPlayerId`
+- Update payment amount
 - Auto-create player payments when needed
 
-Main endpoints:
+Endpoints:
 - `POST /api/payment/session/{sessionId}`
 - `POST /api/payment/session-player/{sessionPlayerId}/pay`
 
-### Current payment behavior
-Player payments are created automatically when:
-- a session becomes `OnGoing`
-- a member is added after the session has already started
-- session prices are set for an ongoing session
+Payment auto-creation triggers:
+- session transitions to `OnGoing`
+- member added after session is already `OnGoing`
+- session prices set while session is `OnGoing`
 
-There is no longer a public endpoint for manual bulk payment generation.
+### 7. Ranking System
+Handled by ranking repositories and `PlayerRankingService`.
 
-## 7. Ranking System
-Handled by ranking repositories and services.
+Capabilities:
+- Store ranking tiers (`Ranking` table)
+- Maintain player ranking per member (`PlayerRanking` table)
+- Expose in member list, member detail, member lookup, and session player APIs
 
-Current capabilities:
-- store ranking tiers
-- maintain player ranking per member
-- expose ranking information in member lookup and player/session APIs
+`PlayerRanking` fields: `EloPoint`, `MatchesPlayed`, `Wins`, `Losses`, `Draws`
 
-Ranking-related data currently includes:
-- ranking name
-- elo point
-- wins / losses / draws
-- matches played
+`PlayerRanking` is intentionally not tenant-filtered (shared across all users).
 
-## Core Domain Models
-Main entities in the application:
-- `AppUser`
-- `Member`
-- `Contact`
-- `Session`
-- `SessionPlayer`
-- `SessionMatch`
-- `SessionMatchPlayer`
-- `SessionPayment`
-- `PlayerPayment`
-- `Ranking`
-- `PlayerRanking`
-- `RevokedToken`
+### Core Domain Models
 
-## Multi-Tenant Behavior
-The application uses `UserId`-based ownership filtering for tenant isolation.
+| Model | Description |
+|-------|-------------|
+| `AppUser` | Authenticated user (tenant owner) |
+| `Member` | Badminton player |
+| `Contact` | Player contact info (phone, email, Facebook) |
+| `Session` | A badminton session with time, courts, capacity |
+| `SessionPlayer` | Player ↔ Session membership with payment status |
+| `SessionMatch` | A match within a session |
+| `SessionMatchPlayer` | Player ↔ Match assignment with team |
+| `SessionPayment` | Pricing config for a session (male/female price) |
+| `PlayerPayment` | Individual payment record per player per session |
+| `Ranking` | Ranking tier definition (e.g. Bronze, Silver, Gold) |
+| `PlayerRanking` | ELO and stats per member |
+| `RevokedToken` | JWT revocation store |
 
-Current rule in the codebase:
-- domain tables are filtered by authenticated user
-- `PlayerRanking` is intentionally not tenant-filtered
-- anonymous lookup paths explicitly rely on bypassing tenant restrictions where required
+### Multi-Tenant Behavior
+- All domain tables (except `PlayerRanking`) carry a `UserId` column.
+- EF Core global query filters enforce per-user data isolation automatically.
+- `CurrentUserService` reads the authenticated user ID from JWT claims.
+- `AppDbContext` assigns `UserId` on insert and sets timestamps on save.
+- Anonymous lookup paths bypass filters where required.
 
-## Notable Implementation Details
-- EF Core global query filters are used for user-owned entities.
-- `CurrentUserService` reads the current user id from claims.
-- `AppDbContext` automatically sets timestamps.
-- `AppDbContext` also assigns `UserId` on insert for user-owned entities when a current user exists.
-- Swagger metadata is already present on controllers.
-- JWT revocation is supported through `RevokedToken`.
+---
 
-## Suggested Next Documentation Files
-If needed, this `docs` folder can be expanded with:
-- `docs/api-endpoints.md`
-- `docs/domain-model.md`
-- `docs/payment-flow.md`
-- `docs/ranking-flow.md`
-- `docs/deployment.md`
+## Badminton_MCP — AI Tooling Server
+
+### Tech Stack
+- `.NET 10` console application
+- `ModelContextProtocol` 1.2.0 — MCP server framework
+- `Microsoft.Extensions.Hosting` — DI and generic host
+- `Microsoft.Extensions.Http` — `IHttpClientFactory`
+
+### Transport
+JSON-RPC 2.0 over **stdio**. The server is spawned once per VS session by GitHub Copilot (via `.mcp.json`) and stays alive for the duration of the session.
+
+### Registered Tools
+
+| Tool | Description |
+|------|-------------|
+| `GetMyAICards` | Open AI-labelled cards assigned to `TRELLO_MEMBER_ID` |
+| `GetBoardAICards` | All AI-labelled cards on the board, optionally filtered by member |
+| `GetBoardLists` | All lists on the board (used to resolve list IDs) |
+| `MoveCardToList` | Moves a card to a specified list |
+| `AddCommentToCard` | Posts a comment on a card (e.g. PR links) |
+
+### Environment Variables
+
+| Variable | Used by |
+|----------|---------|
+| `TRELLO_API_KEY` | All Trello tools |
+| `TRELLO_TOKEN` | All Trello tools |
+| `TRELLO_BOARD_ID` | `GetBoardAICards`, `GetBoardLists`, `MoveCardToList` |
+| `TRELLO_MEMBER_ID` | `GetMyAICards` |
+| `BADMINTON_API_URL` | `BadmintonApiClient` (tools planned for v1.2) |
+
+### Planned for v1.2
+`BadmintonApiClient` is wired into DI but has no tools yet. Planned tools: `GetSessions`, `GetSessionDetail`, `GetMembers`, `GetMemberById`, `GetSessionMatches`, `SetSessionPricing`, `PaySessionPlayer`.
+
+---
+
+## Developer Tooling
+
+| File | Purpose |
+|------|---------|
+| `.mcp.json` | Local MCP config for GitHub Copilot in VS (gitignored) |
+| `.mcp.json.example` | Committed template |
+| `trello.runsettings` | Local test credentials for VS Test Explorer (gitignored) |
+| `trello.runsettings.example` | Committed template |
+| `docs/mcp-server.md` | MCP server reference documentation |
+| `docs/mcp-workflow.md` | End-to-end AI workflow guide |
+| `docs/version.md` | Version history |
+| `docs/new-user-guide.md` | Guide for new club owners using the API |
