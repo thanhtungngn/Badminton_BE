@@ -1,0 +1,157 @@
+name: Trello AI Agent
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Runs every weekday at 08:00 UTC
+    - cron: '0 8 * * 1-5'
+
+jobs:
+  sync-trello-cards:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate required secrets
+        run: |
+          if [ -z "${{ secrets.TRELLO_API_KEY }}" ] || \
+             [ -z "${{ secrets.TRELLO_TOKEN }}" ] || \
+             [ -z "${{ secrets.TRELLO_BOARD_ID }}" ] || \
+             [ -z "${{ secrets.TRELLO_MEMBER_ID }}" ]; then
+            echo "Missing one or more required Trello secrets."
+            echo "Required: TRELLO_API_KEY, TRELLO_TOKEN, TRELLO_BOARD_ID, TRELLO_MEMBER_ID"
+            exit 1
+          fi
+          echo "All required secrets are present."
+
+      - name: Ensure 'ai-agent' label exists
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh label create "ai-agent" \
+            --description "Issue created automatically from a Trello AI card" \
+            --color "0075ca" \
+            --repo "${{ github.repository }}" \
+            2>/dev/null || echo "Label 'ai-agent' already exists, skipping."
+
+      - name: Fetch Trello AI cards and create GitHub Issues
+        env:
+          TRELLO_API_KEY: ${{ secrets.TRELLO_API_KEY }}
+          TRELLO_TOKEN: ${{ secrets.TRELLO_TOKEN }}
+          TRELLO_BOARD_ID: ${{ secrets.TRELLO_BOARD_ID }}
+          TRELLO_MEMBER_ID: ${{ secrets.TRELLO_MEMBER_ID }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: |
+          set -e
+
+          python3 << 'PYEOF'
+          import json
+          import os
+          import subprocess
+          import urllib.request
+          import urllib.parse
+
+          api_key   = os.environ["TRELLO_API_KEY"]
+          token     = os.environ["TRELLO_TOKEN"]
+          member_id = os.environ["TRELLO_MEMBER_ID"]
+          repo      = os.environ["GITHUB_REPOSITORY"]
+
+          # Fetch all open cards assigned to the member
+          url = (
+              f"https://api.trello.com/1/members/{urllib.parse.quote(member_id)}/cards"
+              f"?key={api_key}&token={token}&filter=open"
+              f"&fields=id,name,desc,labels,shortUrl,idList"
+          )
+          with urllib.request.urlopen(url) as resp:
+              all_cards = json.loads(resp.read())
+
+          # Filter to cards that have a label named "AI" (case-insensitive)
+          ai_cards = [
+              c for c in all_cards
+              if any(lbl.get("name", "").strip().upper() == "AI" for lbl in c.get("labels", []))
+          ]
+
+          print(f"Found {len(ai_cards)} Trello card(s) with the AI label.")
+
+          for card in ai_cards:
+              card_id   = card["id"]
+              card_name = card["name"]
+              card_desc = card.get("desc", "").strip()
+              card_url  = card.get("shortUrl", "")
+
+              # Check whether an issue already exists for this Trello card ID
+              search = subprocess.run(
+                  [
+                      "gh", "issue", "list",
+                      "--repo", repo,
+                      "--search", f"trello-card-id:{card_id} in:body",
+                      "--state", "all",
+                      "--json", "number,title",
+                  ],
+                  capture_output=True, text=True
+              )
+              existing = json.loads(search.stdout) if search.stdout.strip() else []
+              if existing:
+                  print(f"  Skipping '{card_name}' — issue already exists (#{existing[0]['number']}).")
+                  continue
+
+              # Build issue body
+              body_lines = [
+                  "## Trello Card",
+                  "",
+                  f"**Card:** [{card_name}]({card_url})",
+                  f"**Trello Card ID:** trello-card-id:{card_id}",
+                  "",
+                  "## Description",
+                  "",
+                  card_desc if card_desc else "_No description provided._",
+                  "",
+                  "---",
+                  "_This issue was automatically created from a Trello card tagged with the **AI** label._",
+                  "_Please follow the instructions in `.github/agents/trello-agent.md` when implementing._",
+              ]
+              body = "\n".join(body_lines)
+
+              # Create the GitHub issue
+              create = subprocess.run(
+                  [
+                      "gh", "issue", "create",
+                      "--repo", repo,
+                      "--title", card_name,
+                      "--body", body,
+                      "--label", "ai-agent",
+                  ],
+                  capture_output=True, text=True
+              )
+
+              if create.returncode != 0:
+                  print(f"  ERROR creating issue for '{card_name}': {create.stderr.strip()}")
+                  continue
+
+              issue_url = create.stdout.strip()
+              issue_number = issue_url.rstrip("/").split("/")[-1]
+              print(f"  Created issue #{issue_number}: {issue_url}")
+
+              # Assign the issue to the Copilot coding agent
+              assign = subprocess.run(
+                  [
+                      "gh", "issue", "edit", issue_number,
+                      "--repo", repo,
+                      "--add-assignee", "copilot",
+                  ],
+                  capture_output=True, text=True
+              )
+              if assign.returncode == 0:
+                  print(f"  Assigned issue #{issue_number} to @copilot.")
+              else:
+                  # Non-fatal — Copilot agent may not be available in all repos
+                  print(f"  Warning: could not assign to @copilot: {assign.stderr.strip()}")
+
+          print("Done.")
+          PYEOF
