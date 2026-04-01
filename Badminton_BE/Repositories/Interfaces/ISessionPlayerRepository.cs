@@ -10,5 +10,6 @@ namespace Badminton_BE.Repositories.Interfaces
         Task<SessionPlayer?> GetByIdWithIncludesAsync(int id);
         Task<IEnumerable<SessionPlayer>> GetByMemberIdWithSessionAsync(int memberId);
         Task<bool> HasOverlappingSessionAsync(int memberId, DateTime start, DateTime end);
+        Task<int> CountActiveBySessionAsync(int sessionId);
     }
 }

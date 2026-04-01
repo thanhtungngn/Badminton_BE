@@ -4,3 +4,34 @@
 - The user prefers multi-tenant data isolation: all domain tables should include a UserId so each authenticated user can only access their own data, except for PlayerRanking which should not have UserId filtering.
 - Whenever code is updated in this repository, the change should be noted in the version document, not just general project documentation.
 - Do not define model or DTO classes inside service classes. Always place them in their own file in the DTOs or Models folder.
+
+## AI Task Workflow
+When working on a Trello card tagged with the **AI** label, always follow this sequence:
+
+1. **Branch** — all work must be done on a branch named `AI/<card-slug>`.
+   - Slug = card name lowercased, spaces → hyphens, special chars stripped.
+   - Branch from `master`. Use `scripts/ai-start.ps1 -CardName "..."` to automate this.
+
+2. **Implement** — make the code changes. Build must pass before proceeding.
+
+3. **Document** — before committing:
+   - Add an entry to `docs/version.md` describing what changed.
+   - Update `docs/current-state.md` if any capability, endpoint, model, or project structure changed.
+
+4. **Bump patch version** — increment the last digit of `<Version>` in both:
+   - `Badminton_BE/Badminton_BE.csproj`
+   - `Badminton_MCP/Badminton_MCP.csproj`
+   - Example: `1.1.0` → `1.1.1`
+
+5. **Commit and push** — single commit: `fix|feat|chore: <summary> (vX.Y.Z)`
+
+6. **Pull Request** — open a PR from `AI/<slug>` → `master` using `gh pr create`.
+   - PR title: `fix|feat|chore: <summary> (vX.Y.Z)`
+   - PR body: summary, Trello card URL, version, link to `docs/version.md`.
+
+7. **Trello** — after PR is created:
+   - Post a comment on the card with the PR URL and a summary of changes.
+   - Move the card to the **Code Review and Testing** list (`69b053ecd1ed8f9bcd01e51e`).
+   - Use `scripts/ai-finish.ps1 -CardId <id> -Summary "..."` to automate steps 5–7.
+
+Full workflow details: `docs/ai-task-workflow.md`

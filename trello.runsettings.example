@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Template for running Trello integration tests locally.
+
+  Setup:
+    1. Copy this file to "trello.runsettings" in the same directory.
+    2. Replace every placeholder value with your real Trello credentials.
+    3. In Visual Studio: Test > Configure Run Settings > Select Solution Wide runsettings File
+       and point it to "trello.runsettings".
+
+  How to get credentials:
+    - TRELLO_API_KEY  : https://trello.com/power-ups/admin  (create a Power-Up, copy the API key)
+    - TRELLO_TOKEN    : https://trello.com/1/authorize?expiration=never&scope=read,write&response_type=token&key=YOUR_API_KEY
+    - TRELLO_BOARD_ID : open your board in Trello, the URL is https://trello.com/b/<BOARD_ID>/...
+    - TRELLO_MEMBER_ID: call GET https://api.trello.com/1/members/me?key=KEY&token=TOKEN and read the "id" field
+-->
+<RunSettings>
+  <RunConfiguration>
+    <EnvironmentVariables>
+      <TRELLO_API_KEY>YOUR_TRELLO_API_KEY</TRELLO_API_KEY>
+      <TRELLO_TOKEN>YOUR_TRELLO_TOKEN</TRELLO_TOKEN>
+      <TRELLO_BOARD_ID>YOUR_TRELLO_BOARD_ID</TRELLO_BOARD_ID>
+      <TRELLO_MEMBER_ID>YOUR_TRELLO_MEMBER_ID</TRELLO_MEMBER_ID>
+    </EnvironmentVariables>
+  </RunConfiguration>
+</RunSettings>

@@ -72,7 +72,18 @@ namespace Badminton_BE.Services
         public async Task<IEnumerable<MemberReadDto>> GetMembersAsync()
         {
             var members = await _repo.GetAllWithContactsAsync();
-            return members.Select(MapToReadDto);
+            var dtos = new List<MemberReadDto>();
+            foreach (var m in members)
+            {
+                var dto = MapToReadDto(m);
+                var stats = await BuildMatchStatsAsync(m.Id, _currentUserService.UserId);
+                dto.Wins = stats.Wins;
+                dto.Losses = stats.Losses;
+                dto.Draws = stats.Draws;
+                dto.WinRate = stats.WinRate;
+                dtos.Add(dto);
+            }
+            return dtos;
         }
 
         public async Task<MemberReadDto?> GetMemberByIdAsync(int id)

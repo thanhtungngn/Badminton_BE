@@ -1,0 +1,275 @@
+name: Release Notes Agent
+
+on:
+  pull_request:
+    types: [closed]
+    branches:
+      - master
+
+jobs:
+  generate-release-notes:
+    # Only run when a release/* branch is merged (not closed without merging)
+    if: >
+      github.event.pull_request.merged == true &&
+      startsWith(github.event.pull_request.head.ref, 'release/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract version from branch name
+        id: version
+        run: |
+          BRANCH="${{ github.event.pull_request.head.ref }}"
+          # e.g. release/v1.0.3  →  v1.0.3
+          VERSION="${BRANCH#release/}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "Detected version: ${VERSION}"
+
+      - name: Collect commits since last release tag
+        id: commits
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+
+          # Find the most recent tag that is reachable from the previous commit
+          PREV_TAG=$(git tag --sort=-version:refname | grep -v "^${VERSION}$" | head -n 1 || true)
+
+          if [ -z "$PREV_TAG" ]; then
+            echo "No previous tag found — collecting all commits."
+            COMMIT_LOG=$(git log --oneline --no-merges --pretty=format:"- %s (%h)" HEAD)
+          else
+            echo "Previous tag: ${PREV_TAG}"
+            COMMIT_LOG=$(git log --oneline --no-merges --pretty=format:"- %s (%h)" "${PREV_TAG}..HEAD")
+          fi
+
+          # Write to a temp file to handle multi-line content safely
+          echo "${COMMIT_LOG}" > /tmp/commit_log.txt
+          echo "prev_tag=${PREV_TAG}" >> "$GITHUB_OUTPUT"
+          echo "Collected $(echo "${COMMIT_LOG}" | wc -l) commit(s)."
+
+      - name: Collect merged PR titles
+        id: prs
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          PREV_TAG="${{ steps.commits.outputs.prev_tag }}"
+          REPO="${{ github.repository }}"
+
+          if [ -n "$PREV_TAG" ]; then
+            # Get the date of the previous tag for filtering PRs
+            SINCE=$(git log -1 --format="%cI" "$PREV_TAG" 2>/dev/null || echo "")
+          else
+            SINCE=""
+          fi
+
+          if [ -n "$SINCE" ]; then
+            gh pr list \
+              --repo "$REPO" \
+              --state merged \
+              --base master \
+              --json number,title,mergedAt \
+              --jq ".[] | select(.mergedAt > \"${SINCE}\") | \"- PR #\(.number): \(.title)\"" \
+              > /tmp/pr_list.txt 2>/dev/null || echo "" > /tmp/pr_list.txt
+          else
+            gh pr list \
+              --repo "$REPO" \
+              --state merged \
+              --base master \
+              --limit 50 \
+              --json number,title \
+              --jq '.[] | "- PR #\(.number): \(.title)"' \
+              > /tmp/pr_list.txt 2>/dev/null || echo "" > /tmp/pr_list.txt
+          fi
+
+          echo "Collected $(wc -l < /tmp/pr_list.txt) merged PR(s)."
+
+      - name: Generate release notes with GitHub Models
+        id: generate
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          COMMITS=$(cat /tmp/commit_log.txt)
+          PRS=$(cat /tmp/pr_list.txt)
+
+          PROMPT="You are a technical writer for a badminton club management API (ASP.NET Core, C#).
+          Generate structured Markdown release notes for version ${VERSION}.
+
+          Use this exact structure (omit empty sections):
+
+          # Release Notes - ${VERSION}
+
+          ## Version
+          \`${VERSION}\`
+
+          ## Summary
+          <one or two sentences>
+
+          ## New Features
+          ### <Feature Name>
+          - details
+
+          ## Bug Fixes
+          ### <Fix Name>
+          - details
+
+          ## Improvements
+          ### <Improvement Name>
+          - details
+
+          ## Breaking Changes
+          ### <Change Name>
+          - details
+
+          ## Documentation
+          - list doc changes
+
+          ## Notes
+          <any caveats>
+
+          Categorise by commit prefix (feat/fix/improve/refactor/docs/chore).
+          Exclude merge commits and version-bump commits.
+          Domain context: Sessions, Members, Payments, Matches, Elo Rankings, JWT Auth.
+
+          Commits:
+          ${COMMITS}
+
+          Merged PRs:
+          ${PRS}"
+
+          # Call GitHub Models API (GPT-4o)
+          RESPONSE=$(curl -sf \
+            -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            -H "Content-Type: application/json" \
+            https://models.inference.ai.azure.com/chat/completions \
+            -d "$(python3 -c "
+          import json, sys
+          prompt = sys.stdin.read()
+          payload = {
+              'model': 'gpt-4o',
+              'messages': [{'role': 'user', 'content': prompt}],
+              'temperature': 0.3,
+              'max_tokens': 2000
+          }
+          print(json.dumps(payload))
+          " <<< "${PROMPT}")" || true)
+
+          if [ -n "$RESPONSE" ]; then
+            NOTES=$(echo "$RESPONSE" | python3 -c "
+          import json, sys
+          data = json.load(sys.stdin)
+          print(data['choices'][0]['message']['content'])
+          " 2>/dev/null || true)
+          fi
+
+          # Fallback: build structured notes from commits if AI call fails
+          if [ -z "$NOTES" ]; then
+            echo "GitHub Models API unavailable, generating structured notes from commits."
+            python3 << PYEOF
+          import os
+
+          version = "${VERSION}"
+          commits_raw = open("/tmp/commit_log.txt").read().strip()
+          prs_raw     = open("/tmp/pr_list.txt").read().strip()
+
+          features, fixes, improvements, docs_changes, others = [], [], [], [], []
+
+          for line in commits_raw.splitlines():
+              l = line.lstrip("- ").strip()
+              low = l.lower()
+              if low.startswith(("feat:", "feature:")):
+                  features.append(f"- {l}")
+              elif low.startswith(("fix:", "bugfix:")):
+                  fixes.append(f"- {l}")
+              elif low.startswith(("improve:", "refactor:", "perf:", "chore:")):
+                  improvements.append(f"- {l}")
+              elif low.startswith("docs:"):
+                  docs_changes.append(f"- {l}")
+              else:
+                  others.append(f"- {l}")
+
+          sections = [f"# Release Notes - {version}", "", f"## Version", f"\`{version}\`", ""]
+
+          sections += ["## Summary", f"Changes included in version {version}.", ""]
+
+          if features:
+              sections += ["## New Features", ""] + features + [""]
+          if fixes:
+              sections += ["## Bug Fixes", ""] + fixes + [""]
+          if improvements:
+              sections += ["## Improvements", ""] + improvements + [""]
+          if docs_changes:
+              sections += ["## Documentation", ""] + docs_changes + [""]
+          if others:
+              sections += ["## Other Changes", ""] + others + [""]
+
+          if prs_raw:
+              sections += ["## Merged Pull Requests", "", prs_raw, ""]
+
+          notes = "\n".join(sections)
+          with open("/tmp/release_notes.md", "w") as f:
+              f.write(notes)
+          print("Generated fallback release notes.")
+          PYEOF
+          else
+            echo "$NOTES" > /tmp/release_notes.md
+            echo "Generated release notes via GitHub Models API."
+          fi
+
+      - name: Write release notes file
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          OUTPUT_PATH="docs/releases/${VERSION}.md"
+
+          if [ -f "${OUTPUT_PATH}" ]; then
+            echo "Release notes file already exists at ${OUTPUT_PATH} — overwriting."
+          fi
+
+          cp /tmp/release_notes.md "${OUTPUT_PATH}"
+          echo "Wrote release notes to ${OUTPUT_PATH}"
+          cat "${OUTPUT_PATH}"
+
+      - name: Commit and push release notes
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          OUTPUT_PATH="docs/releases/${VERSION}.md"
+
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add "${OUTPUT_PATH}"
+
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+          else
+            git commit -m "docs: add release notes for ${VERSION}"
+            git push origin master
+            echo "Release notes committed and pushed."
+          fi
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          NOTES_PATH="docs/releases/${VERSION}.md"
+
+          # Check if a GitHub Release already exists for this tag
+          EXISTING=$(gh release view "${VERSION}" --repo "${{ github.repository }}" 2>/dev/null || true)
+
+          if [ -n "$EXISTING" ]; then
+            echo "GitHub Release ${VERSION} already exists — skipping."
+          else
+            gh release create "${VERSION}" \
+              --repo "${{ github.repository }}" \
+              --title "Release ${VERSION}" \
+              --notes-file "${NOTES_PATH}" \
+              --target master
+            echo "Created GitHub Release: ${VERSION}"
+          fi
