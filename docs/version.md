@@ -1,6 +1,37 @@
 # Version History
 
-## v1.1.0 — MCP Server & Bug Fixes
+## v1.1.1 — Badminton API MCP Tools
+> Branch: `AI/badminton-api-mcp-tools`
+
+### Added — Badminton_MCP
+- **`Tools/BadmintonTools.cs`** — 13 new MCP tools exposing the full Badminton REST API to GitHub Copilot:
+
+  | Tool | Endpoint |
+  |------|----------|
+  | `Login` | `POST /api/auth/login` — authenticates and stores JWT for the session |
+  | `GetSessions` | `GET /api/session` |
+  | `GetDashboardSessions` | `GET /api/session/dashboard` |
+  | `GetSessionDetail` | `GET /api/session/{id}/detail` |
+  | `CreateSession` | `POST /api/session` |
+  | `UpdateSession` | `PUT /api/session/{id}` |
+  | `GetMembers` | `GET /api/member` |
+  | `GetMemberById` | `GET /api/member/{id}` |
+  | `LookupMemberByContact` | `GET /api/member/lookup?contactValue=...` |
+  | `AddMemberToSession` | `POST /api/sessionplayer` |
+  | `RemoveMemberFromSession` | `DELETE /api/sessionplayer/{id}` |
+  | `UpdateSessionPlayerStatus` | `PATCH /api/sessionplayer/{id}/status` |
+  | `SetSessionPricing` | `POST /api/payment/session/{id}` |
+  | `PaySessionPlayer` | `POST /api/payment/session-player/{id}/pay` |
+
+- **`BadmintonApiClient`** extended:
+  - `_token` field reads `BADMINTON_API_TOKEN` env var at startup.
+  - `SetToken(string)` method stores the JWT after a `Login` call.
+  - `PutAsync`, `PatchAsync`, `DeleteAsync` methods added.
+  - Token applied automatically to all requests.
+
+---
+
+
 > Branch: `release/v1.1.0`
 
 ### Added — Badminton_MCP Server

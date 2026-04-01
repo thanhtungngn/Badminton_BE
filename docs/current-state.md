@@ -1,4 +1,4 @@
-# Badminton Project — Current State (v1.1.0)
+# Badminton Project — Current State (v1.1.1)
 
 ## Solution Overview
 
@@ -201,7 +201,7 @@ Capabilities:
 ### Transport
 JSON-RPC 2.0 over **stdio**. The server is spawned once per VS session by GitHub Copilot (via `.mcp.json`) and stays alive for the duration of the session.
 
-### Registered Tools
+### Registered Tools — Trello
 
 | Tool | Description |
 |------|-------------|
@@ -210,6 +210,25 @@ JSON-RPC 2.0 over **stdio**. The server is spawned once per VS session by GitHub
 | `GetBoardLists` | All lists on the board (used to resolve list IDs) |
 | `MoveCardToList` | Moves a card to a specified list |
 | `AddCommentToCard` | Posts a comment on a card (e.g. PR links) |
+
+### Registered Tools — Badminton API
+
+| Tool | Description |
+|------|-------------|
+| `Login` | Authenticates with username/password, stores JWT for the session |
+| `GetSessions` | All sessions for the authenticated user |
+| `GetDashboardSessions` | Active (Upcoming/OnGoing) sessions only |
+| `GetSessionDetail` | Full session detail — players, payments, matches |
+| `CreateSession` | Create a new session with pricing |
+| `UpdateSession` | Update session fields or change status |
+| `GetMembers` | All members with ranking and stats |
+| `GetMemberById` | Single member full profile |
+| `LookupMemberByContact` | Anonymous lookup by phone/email/Facebook |
+| `AddMemberToSession` | Add a player to a session |
+| `RemoveMemberFromSession` | Remove a player from a session |
+| `UpdateSessionPlayerStatus` | Set player status (Joined/Canceled/Paid/NotPaid) |
+| `SetSessionPricing` | Set male/female pricing for a session |
+| `PaySessionPlayer` | Record a payment from a player |
 
 ### Environment Variables
 
