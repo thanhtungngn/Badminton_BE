@@ -1,5 +1,27 @@
 # Version History
 
+## v1.1.2 — MCP Server: Render.com Deployment (SSE/HTTP Transport)
+> Branch: `copilot/suggest-deployment-options`
+
+### Changed — Badminton_MCP
+- **Transport switched from stdio → HTTP/SSE** for cloud hosting on Render.com.
+  - `Program.cs` now uses `WebApplication` and `.WithHttpTransport()` / `app.MapMcp()`.
+  - MCP clients connect over SSE at `GET /sse` (or the streamable HTTP endpoint `POST /mcp`).
+- **Project SDK changed** from `Microsoft.NET.Sdk` (console) to `Microsoft.NET.Sdk.Web`.
+- **Package swap**: replaced `ModelContextProtocol` + `Microsoft.Extensions.Hosting` with `ModelContextProtocol.AspNetCore 1.2.0`.
+
+### Added — Infrastructure
+- **`Dockerfile.mcp`** — multi-stage Docker image for the MCP project; listens on `$PORT` (Render) or `8080` (local).
+- **`render.yaml`** — added `badminton-mcp` web service pointing at `Dockerfile.mcp` with all required env-var placeholders.
+- **`.mcp.json.example`** — added `badminton-mcp-remote` SSE entry with the Render URL template.
+
+### How to communicate with the deployed server
+Connect any MCP client (GitHub Copilot, Claude Desktop, Cursor, etc.) using the **SSE** transport type:
+- **URL:** `https://badminton-mcp.onrender.com/sse`  *(replace with your actual Render service URL)*
+- In `.mcp.json`: set `"type": "sse"` and `"url": "https://<your-render-url>/sse"`.
+
+---
+
 ## v1.1.1 — Badminton API MCP Tools
 > Branch: `AI/badminton-api-mcp-tools`
 

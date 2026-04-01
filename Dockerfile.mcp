@@ -1,0 +1,22 @@
+# Multi-stage Dockerfile for Badminton_MCP (ASP.NET Core 10 / MCP HTTP server)
+# Build stage
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+
+# copy csproj and restore first for layer caching
+COPY Badminton_MCP/Badminton_MCP.csproj Badminton_MCP/
+RUN dotnet restore Badminton_MCP/Badminton_MCP.csproj
+
+# copy everything and publish
+COPY . .
+RUN dotnet publish Badminton_MCP/Badminton_MCP.csproj -c Release -o /app/publish /p:UseAppHost=false
+
+# Runtime stage
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
+WORKDIR /app
+COPY --from=build /app/publish ./
+
+EXPOSE 8080
+
+# Render injects $PORT at runtime; fall back to 8080 for local Docker runs
+ENTRYPOINT ["sh", "-c", "dotnet Badminton_MCP.dll --urls http://+:${PORT:-8080}"]

@@ -1,4 +1,4 @@
-# Badminton Project — Current State (v1.1.1)
+# Badminton Project — Current State (v1.1.2)
 
 ## Solution Overview
 
@@ -6,8 +6,8 @@ The solution (`Badminton_BE.slnx`) contains three projects:
 
 | Project | Type | Version | Purpose |
 |---------|------|---------|---------|
-| `Badminton_BE` | ASP.NET Core Web API | 1.1.0 | Core backend — sessions, members, payments, rankings |
-| `Badminton_MCP` | .NET 10 Console (MCP Server) | 1.1.0 | AI tooling — exposes Trello and Badminton API tools to GitHub Copilot |
+| `Badminton_BE` | ASP.NET Core Web API | 1.1.2 | Core backend — sessions, members, payments, rankings |
+| `Badminton_MCP` | ASP.NET Core Web (MCP Server) | 1.1.2 | AI tooling — exposes Trello and Badminton API tools to GitHub Copilot |
 | `Badminton_MCP.Tests` | xUnit Test Project | — | Integration tests for the MCP server's Trello connection |
 
 ---
@@ -193,13 +193,17 @@ Capabilities:
 ## Badminton_MCP — AI Tooling Server
 
 ### Tech Stack
-- `.NET 10` console application
-- `ModelContextProtocol` 1.2.0 — MCP server framework
-- `Microsoft.Extensions.Hosting` — DI and generic host
-- `Microsoft.Extensions.Http` — `IHttpClientFactory`
+- `.NET 10`
+- `ASP.NET Core Web` application
+- `ModelContextProtocol.AspNetCore` 1.2.0 — MCP server framework with HTTP/SSE transport
+- `Microsoft.Extensions.Http` — `IHttpClientFactory` (provided by the ASP.NET Core Web SDK)
 
 ### Transport
-JSON-RPC 2.0 over **stdio**. The server is spawned once per VS session by GitHub Copilot (via `.mcp.json`) and stays alive for the duration of the session.
+JSON-RPC 2.0 over **HTTP/SSE**. The server exposes:
+- `GET /sse` — SSE endpoint for MCP clients (GitHub Copilot, Claude Desktop, Cursor, etc.)
+- `POST /mcp` — Streamable HTTP endpoint (MCP 2025-03-26 spec)
+
+The server is deployed on Render.com and accessible at `https://badminton-mcp.onrender.com`. For local use, run with `dotnet run` and connect via `http://localhost:<port>/sse`.
 
 ### Registered Tools — Trello
 
