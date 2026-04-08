@@ -46,6 +46,13 @@ so that [benefit].
 - Question that needs stakeholder input (if any).
 ```
 
+## Subtask Rules
+
+When creating subtasks from a Jira ticket:
+- Subtasks **inherit** the parent ticket's epic, labels, sprint, and workflow context — do not create a new epic or sprint per subtask.
+- **No duplicate subtasks** — before adding a subtask, check existing subtasks on the parent ticket. If an equivalent one already exists, update it rather than creating a new one.
+- Each subtask must have a distinct, specific scope; if two subtasks overlap, merge them into one.
+
 ## Conventions
 
 - Write in plain English — avoid technical jargon (no mention of REST, JSON, EF Core, etc.).

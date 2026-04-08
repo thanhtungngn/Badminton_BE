@@ -32,6 +32,7 @@ namespace Badminton_BE.Data
         public DbSet<SessionPayment> SessionPayments => Set<SessionPayment>();
         public DbSet<PlayerPayment> PlayerPayments => Set<PlayerPayment>();
         public DbSet<RevokedToken> RevokedTokens => Set<RevokedToken>();
+        public DbSet<Notification> Notifications => Set<Notification>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -245,6 +246,25 @@ namespace Badminton_BE.Data
                     .HasForeignKey(smp => smp.SessionPlayerId)
                     .OnDelete(DeleteBehavior.Restrict);
                 b.HasQueryFilter(smp => !HasCurrentUserId || smp.UserId == CurrentUserIdOrDefault);
+            });
+
+            modelBuilder.Entity<Notification>(b =>
+            {
+                b.HasKey(n => n.Id);
+                b.Property(n => n.UserId).IsRequired();
+                b.HasIndex(n => n.UserId);
+                b.Property(n => n.Type).HasConversion<string>().IsRequired();
+                b.Property(n => n.IsRead).IsRequired().HasDefaultValue(false);
+                b.Property(n => n.Payload).IsRequired().HasMaxLength(2000);
+
+                b.HasIndex(n => new { n.UserId, n.IsRead });
+                b.HasIndex(n => new { n.UserId, n.CreatedDate });
+
+                b.HasOne(n => n.Session)
+                    .WithMany()
+                    .HasForeignKey(n => n.SessionId)
+                    .OnDelete(DeleteBehavior.SetNull);
+                b.HasQueryFilter(n => !HasCurrentUserId || n.UserId == CurrentUserIdOrDefault);
             });
         }
 

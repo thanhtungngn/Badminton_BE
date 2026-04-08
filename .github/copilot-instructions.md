@@ -5,7 +5,13 @@
 - Whenever code is updated in this repository, the change should be noted in the version document, not just general project documentation.
 - Do not define model or DTO classes inside service classes. Always place them in their own file in the DTOs or Models folder.
 
-## AI Task Workflow
+## Subtask Rules
+When creating subtasks (e.g. from a Trello card or implementation plan):
+- Subtasks **inherit** the parent task's branch, labels, and workflow context — do not create a new branch per subtask.
+- **No duplicate subtasks** — check for existing equivalent subtasks before adding. 
+- Each subtask must have a distinct, specific scope; if two subtasks overlap, merge them into one.
+
+
 When working on a Trello card tagged with the **AI** label, always follow this sequence:
 
 1. **Branch** — all work must be done on a branch named `AI/<card-slug>`.

@@ -1,6 +1,24 @@
 # Version History
 
-## v1.1.4 — Remote MCP Documentation Alignment
+## v1.1.5 — BCM-107: Notification Data Model and Migration
+> Branch: `feature/BCM-105`
+
+### Added — Notification System (Data Layer)
+- New `NotificationType` enum: `PriceChanged`, `PaymentRecorded`, `UnpaidReminder` (stored as string).
+- New `Notification` model implementing `IEntity` + `IUserOwnedEntity` with fields: `UserId`, `SessionId` (nullable FK to `Session`), `Type`, `IsRead`, `Payload` (JSON string, max 2000 chars).
+- Registered `DbSet<Notification>` in `AppDbContext` with:
+  - `UserId` query filter for tenant isolation.
+  - Composite index on `(UserId, IsRead)` for unread badge queries.
+  - Composite index on `(UserId, CreatedDate)` for timeline ordering.
+  - `OnDelete(SetNull)` on `SessionId` FK so notifications survive session deletion.
+- EF Core migration `AddNotification` generated.
+
+### Files
+- `Badminton_BE/Models/Notification.cs` *(new)*
+- `Badminton_BE/Data/AppDbContext.cs`
+- `Badminton_BE/Migrations/..._AddNotification.cs` *(new)*
+
+
 > Branch: `master`
 
 ### Changed — AI/MCP Documentation

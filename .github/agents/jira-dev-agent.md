@@ -43,8 +43,10 @@ Badminton_MCP/          ← MCP server (tool extensions)
 
 ## Workflow
 
-1. **Branch** — create `AI/<jira-key-slug>` from `master`.
-   - Example: ticket `PROJ-42 Fix session capacity` → branch `AI/proj-42-fix-session-capacity`
+1. **Branch** — create a branch from `master` using the Jira ticket type and key:
+   - Format: `feature/<jira-key>` for new features, `bug/<jira-key>` for bug fixes.
+   - Example: feature ticket `SB-42` → `feature/SB-42`; bug ticket `SB-99` → `bug/SB-99`
+   - Determine type from the Jira issue type field (Story / Feature → `feature/`, Bug → `bug/`).
 2. **Implement** — make only the changes needed to fulfil the ticket.
 3. **Document** — update `docs/version.md`; update `docs/current-state.md` if the API surface or data model changed.
 4. **Bump version** — increment patch in `Badminton_BE/Badminton_BE.csproj` and `Badminton_MCP/Badminton_MCP.csproj`.
@@ -52,6 +54,18 @@ Badminton_MCP/          ← MCP server (tool extensions)
 6. **PR** — open a PR to `master`.
    - Title format: `feat|fix|chore: <summary> (vX.Y.Z)`
    - Body: summary of changes, closes the GitHub issue (`Closes #<number>`), links to Jira ticket.
+7. **Jira comment** — after the PR is created, post a comment on the Jira ticket using `AddJiraComment`:
+   - Include a short summary of what was implemented.
+   - Include the PR URL for review.
+   - Example comment format:
+     ```
+     Dev work completed.
+
+     Summary: <what was implemented>
+
+     PR for review: <PR URL>
+     ```
+8. **Move ticket** — transition the Jira ticket to **Code Review** using `TransitionJiraIssue(key: "PROJ-123", transitionName: "Code Review")`.
 
 ## PR Requirements
 

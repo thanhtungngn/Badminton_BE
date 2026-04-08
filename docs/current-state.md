@@ -1,4 +1,4 @@
-# Badminton Project — Current State (v1.1.4)
+# Badminton Project — Current State (v1.1.5)
 
 ## Solution Overview
 
