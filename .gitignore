@@ -371,3 +371,4 @@ trello.runsettings
 
 # Local MCP config - contains real credentials
 .mcp.json
+mcp.json

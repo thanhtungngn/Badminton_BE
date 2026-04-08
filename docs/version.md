@@ -1,5 +1,15 @@
 # Version History
 
+## v1.1.3 — BA Agent Workflow Update
+> Branch: `master`
+
+### Changed — Agent Instructions
+- Updated the Jira BA agent workflow so that after posting ticket analysis to Jira, it also transitions the issue to **Analyse**.
+- Added explicit transition guidance in the BA agent instructions for consistent team workflow across tickets.
+
+### Files
+- `.github/agents/jira-ba-agent.md`
+
 ## v1.1.2 — MCP Server: Render.com Deployment (SSE/HTTP Transport)
 > Branch: `copilot/suggest-deployment-options`
 

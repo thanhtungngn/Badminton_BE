@@ -1,0 +1,339 @@
+name: Jira AI Agent
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Runs every weekday at 08:30 UTC (30 min after Trello agent)
+    - cron: '30 8 * * 1-5'
+
+jobs:
+  process-jira-ai-tickets:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate required secrets
+        run: |
+          if [ -z "${{ secrets.JIRA_BASE_URL }}" ] || \
+             [ -z "${{ secrets.JIRA_USER_EMAIL }}" ] || \
+             [ -z "${{ secrets.JIRA_API_TOKEN }}" ]; then
+            echo "Missing one or more required Jira secrets."
+            echo "Required: JIRA_BASE_URL, JIRA_USER_EMAIL, JIRA_API_TOKEN"
+            exit 1
+          fi
+          echo "All required secrets are present."
+
+      - name: Ensure 'jira-ai-agent' label exists
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh label create "jira-ai-agent" \
+            --description "Issue created automatically from a Jira AI ticket" \
+            --color "0052cc" \
+            --repo "${{ github.repository }}" \
+            2>/dev/null || echo "Label 'jira-ai-agent' already exists, skipping."
+
+      - name: Process Jira AI tickets
+        env:
+          JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+          JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
+          JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+
+          python3 << 'PYEOF'
+          import base64
+          import json
+          import os
+          import subprocess
+          import urllib.request
+          import urllib.parse
+
+          jira_base  = os.environ["JIRA_BASE_URL"].rstrip("/")
+          jira_email = os.environ["JIRA_USER_EMAIL"]
+          jira_token = os.environ["JIRA_API_TOKEN"]
+          repo       = os.environ["GITHUB_REPOSITORY"]
+          gh_token   = os.environ["GITHUB_TOKEN"]
+
+          # --- Jira auth ---
+          credentials = base64.b64encode(f"{jira_email}:{jira_token}".encode()).decode()
+          jira_headers = {
+              "Authorization": f"Basic {credentials}",
+              "Content-Type": "application/json",
+              "Accept": "application/json",
+          }
+
+          # Markers embedded in comments for idempotency
+          AI_DRAFT_MARKER    = "<!-- jira-ai-agent-draft -->"
+          AI_ESTIMATE_MARKER = "<!-- jira-ai-agent-estimate -->"
+          MIN_DESC_LENGTH    = 50
+
+          # ------------------------------------------------------------------ helpers
+
+          def jira_request(method, path, body=None):
+              url = f"{jira_base}/rest/api/3{path}"
+              req = urllib.request.Request(url, headers=jira_headers, method=method)
+              if body is not None:
+                  req.data = json.dumps(body).encode()
+              try:
+                  with urllib.request.urlopen(req) as resp:
+                      raw = resp.read()
+                      return json.loads(raw) if raw else {}
+              except urllib.error.HTTPError as e:
+                  body_text = e.read().decode()
+                  raise RuntimeError(f"Jira {method} {path} failed [{e.code}]: {body_text}") from e
+
+          def adf_to_text(node):
+              """Recursively extract plain text from Atlassian Document Format."""
+              if not node:
+                  return ""
+              if isinstance(node, str):
+                  return node
+              if isinstance(node, dict):
+                  if node.get("type") == "text":
+                      return node.get("text", "")
+                  sep = "\n" if node.get("type") in ("paragraph", "heading", "listItem") else " "
+                  parts = [adf_to_text(c) for c in node.get("content", [])]
+                  return sep.join(p for p in parts if p)
+              return ""
+
+          def make_adf_doc(text):
+              """Convert multiline plain text to a minimal ADF document."""
+              paragraphs = [p.strip() for p in text.strip().split("\n\n") if p.strip()]
+              content = []
+              for para in paragraphs:
+                  if para.startswith("## "):
+                      content.append({
+                          "type": "heading",
+                          "attrs": {"level": 2},
+                          "content": [{"type": "text", "text": para[3:]}],
+                      })
+                  elif para.startswith("### "):
+                      content.append({
+                          "type": "heading",
+                          "attrs": {"level": 3},
+                          "content": [{"type": "text", "text": para[4:]}],
+                      })
+                  else:
+                      lines = para.split("\n")
+                      inline = []
+                      for i, line in enumerate(lines):
+                          inline.append({"type": "text", "text": line})
+                          if i < len(lines) - 1:
+                              inline.append({"type": "hardBreak"})
+                      content.append({"type": "paragraph", "content": inline})
+              return {"version": 1, "type": "doc", "content": content}
+
+          def call_github_models(prompt, system_prompt="You are a helpful assistant."):
+              payload = json.dumps({
+                  "model": "gpt-4o",
+                  "messages": [
+                      {"role": "system", "content": system_prompt},
+                      {"role": "user",   "content": prompt},
+                  ],
+                  "temperature": 0.7,
+                  "max_tokens": 1500,
+              }).encode()
+              req = urllib.request.Request(
+                  "https://models.inference.ai.azure.com/chat/completions",
+                  data=payload,
+                  headers={
+                      "Authorization": f"Bearer {gh_token}",
+                      "Content-Type": "application/json",
+                  },
+              )
+              with urllib.request.urlopen(req) as resp:
+                  return json.loads(resp.read())["choices"][0]["message"]["content"].strip()
+
+          def add_jira_comment(issue_key, text):
+              jira_request("POST", f"/issue/{issue_key}/comment", {"body": make_adf_doc(text)})
+
+          def comment_exists(issue_key, marker):
+              data = jira_request("GET", f"/issue/{issue_key}/comment?maxResults=100")
+              for c in data.get("comments", []):
+                  if marker in adf_to_text(c.get("body", {})):
+                      return True
+              return False
+
+          def update_time_estimate(issue_key, jira_estimate):
+              jira_request("PUT", f"/issue/{issue_key}", {
+                  "update": {
+                      "timetracking": [{"set": {"originalEstimate": jira_estimate}}]
+                  }
+              })
+
+          # ------------------------------------------------------------------ main
+
+          jql = "labels = AI AND assignee = currentUser() AND statusCategory != Done"
+          search = jira_request(
+              "GET",
+              f"/search?jql={urllib.parse.quote(jql)}"
+              f"&fields=summary,description,labels,timetracking,comment,status&maxResults=50",
+          )
+
+          issues = search.get("issues", [])
+          print(f"Found {len(issues)} Jira issue(s) with the AI label.")
+
+          for issue in issues:
+              issue_key = issue["key"]
+              fields    = issue["fields"]
+              summary   = fields.get("summary", "").strip()
+              desc_adf  = fields.get("description")
+              tracking  = fields.get("timetracking") or {}
+              issue_url = f"{jira_base}/browse/{issue_key}"
+              desc_text = adf_to_text(desc_adf).strip()
+
+              print(f"\nProcessing [{issue_key}] {summary}  (desc={len(desc_text)} chars)")
+
+              # ---- 1. Skip if GitHub issue already exists ----
+              gh_search = subprocess.run(
+                  ["gh", "issue", "list", "--repo", repo,
+                   "--search", f"jira-issue-key:{issue_key} in:body",
+                   "--state", "all", "--json", "number,title"],
+                  capture_output=True, text=True,
+              )
+              existing = json.loads(gh_search.stdout) if gh_search.stdout.strip() else []
+              if existing:
+                  print(f"  Skipping — GitHub issue #{existing[0]['number']} already exists.")
+                  continue
+
+              # ---- 2. Generate draft description if description is thin ----
+              if len(desc_text) < MIN_DESC_LENGTH:
+                  if comment_exists(issue_key, AI_DRAFT_MARKER):
+                      print(f"  Draft already posted. Waiting for description update.")
+                      continue
+
+                  print(f"  Description thin — generating Dev + BA drafts via GitHub Models...")
+
+                  dev_desc = call_github_models(
+                      f"Ticket title: \"{summary}\"\n\n"
+                      "Write a concise developer-focused Jira ticket description.\n\n"
+                      "Include:\n"
+                      "## Overview\nBrief explanation (2-3 sentences).\n\n"
+                      "## Acceptance Criteria\n- Testable criteria (bullet list).\n\n"
+                      "## Technical Notes\nRelevant constraints or implementation hints.\n\n"
+                      "Do not invent specifics not implied by the title.",
+                      "You are a senior software developer writing a Jira ticket description.",
+                  )
+
+                  ba_desc = call_github_models(
+                      f"Ticket title: \"{summary}\"\n\n"
+                      "Write a concise business analyst-focused Jira ticket description.\n\n"
+                      "Include:\n"
+                      "## Business Context\nWhy this matters (2-3 sentences).\n\n"
+                      "## User Story\nAs a [user], I want [goal], so that [benefit].\n\n"
+                      "## Business Acceptance Criteria\n- Business-level criteria (bullet list).\n\n"
+                      "Avoid technical jargon. Focus on user value.",
+                      "You are a business analyst writing a Jira ticket description.",
+                  )
+
+                  comment = (
+                      f"{AI_DRAFT_MARKER}\n"
+                      "## AI Agent — Draft Description\n\n"
+                      f'The ticket **"{summary}"** has no description (or a very short one). '
+                      "Here are two AI-generated drafts based on the title.\n\n"
+                      "Please review, edit, and **update the ticket description** with your preferred version. "
+                      "The agent will pick it up automatically on the next run.\n\n"
+                      "---\n\n"
+                      "### Developer Perspective\n\n"
+                      f"{dev_desc}\n\n"
+                      "---\n\n"
+                      "### Business Analyst Perspective\n\n"
+                      f"{ba_desc}\n\n"
+                      "---\n\n"
+                      "_Generated automatically. Please update the description above to proceed._"
+                  )
+                  add_jira_comment(issue_key, comment)
+                  print(f"  Posted draft comment on {issue_key}.")
+                  continue
+
+              # ---- 3. Set time estimate if not already set ----
+              if not tracking.get("originalEstimate"):
+                  print(f"  No estimate set — generating via GitHub Models...")
+
+                  estimate_response = call_github_models(
+                      f"Ticket: \"{summary}\"\n\nDescription:\n{desc_text[:800]}\n\n"
+                      "Provide a time estimate for a single developer.\n\n"
+                      "Respond in EXACTLY this format:\n"
+                      "ESTIMATE: Xh\n"
+                      "REASONING: One paragraph explaining the estimate.\n\n"
+                      "Use whole hours: 1h, 2h, 4h, 8h, 16h, etc.",
+                      "You are a senior software developer estimating Jira ticket effort.",
+                  )
+
+                  jira_estimate = "4h"
+                  reasoning     = estimate_response
+                  for line in estimate_response.splitlines():
+                      stripped = line.strip()
+                      if stripped.upper().startswith("ESTIMATE:"):
+                          jira_estimate = stripped.split(":", 1)[1].strip()
+                      elif stripped.upper().startswith("REASONING:"):
+                          reasoning = stripped.split(":", 1)[1].strip()
+
+                  update_time_estimate(issue_key, jira_estimate)
+                  add_jira_comment(
+                      issue_key,
+                      f"{AI_ESTIMATE_MARKER}\n"
+                      "## AI Agent — Time Estimate\n\n"
+                      f"**Estimated effort:** `{jira_estimate}`\n\n"
+                      f"**Reasoning:** {reasoning}\n\n"
+                      "_This estimate was generated automatically and should be reviewed by the assignee._",
+                  )
+                  print(f"  Set estimate: {jira_estimate} on {issue_key}.")
+
+              # ---- 4. Create GitHub Issue and assign to Copilot ----
+              body = "\n".join([
+                  "## Jira Ticket",
+                  "",
+                  f"**Ticket:** [{issue_key}]({issue_url})",
+                  f"**jira-issue-key:{issue_key}**",
+                  "",
+                  "## Description",
+                  "",
+                  desc_text,
+                  "",
+                  "---",
+                  "_This issue was automatically created from a Jira ticket tagged with the **AI** label._",
+                  "_Developer tasks: follow `.github/agents/jira-dev-agent.md`._",
+                  "_BA / requirements tasks: follow `.github/agents/jira-ba-agent.md`._",
+              ])
+
+              create = subprocess.run(
+                  ["gh", "issue", "create", "--repo", repo,
+                   "--title", f"[{issue_key}] {summary}",
+                   "--body", body,
+                   "--label", "jira-ai-agent"],
+                  capture_output=True, text=True,
+              )
+              if create.returncode != 0:
+                  print(f"  ERROR creating issue for {issue_key}: {create.stderr.strip()}")
+                  continue
+
+              gh_issue_url    = create.stdout.strip()
+              gh_issue_number = gh_issue_url.rstrip("/").split("/")[-1]
+              print(f"  Created GitHub issue #{gh_issue_number}: {gh_issue_url}")
+
+              subprocess.run(
+                  ["gh", "issue", "edit", gh_issue_number, "--repo", repo,
+                   "--add-assignee", "copilot"],
+                  capture_output=True, text=True,
+              )
+
+              add_jira_comment(
+                  issue_key,
+                  f"GitHub Issue created by AI Agent: {gh_issue_url}\n\n"
+                  "The Copilot coding agent has been assigned and will implement this ticket.\n"
+                  f"Track progress: {gh_issue_url}",
+              )
+              print(f"  Posted GitHub link back to {issue_key}.")
+
+          print("\nJira AI Agent run complete.")
+          PYEOF
