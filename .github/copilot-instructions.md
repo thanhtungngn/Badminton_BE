@@ -20,7 +20,6 @@ When working on a Trello card tagged with the **AI** label, always follow this s
 
 4. **Bump patch version** — increment the last digit of `<Version>` in both:
    - `Badminton_BE/Badminton_BE.csproj`
-   - `Badminton_MCP/Badminton_MCP.csproj`
    - Example: `1.1.0` → `1.1.1`
 
 5. **Commit and push** — single commit: `fix|feat|chore: <summary> (vX.Y.Z)`

@@ -1,4 +1,4 @@
-# Badminton Project — Current State (v1.1.2)
+# Badminton Project — Current State (v1.1.4)
 
 ## Solution Overview
 
@@ -7,8 +7,8 @@ The solution (`Badminton_BE.slnx`) contains three projects:
 | Project | Type | Version | Purpose |
 |---------|------|---------|---------|
 | `Badminton_BE` | ASP.NET Core Web API | 1.1.2 | Core backend — sessions, members, payments, rankings |
-| `Badminton_MCP` | ASP.NET Core Web (MCP Server) | 1.1.2 | AI tooling — exposes Trello and Badminton API tools to GitHub Copilot |
-| `Badminton_MCP.Tests` | xUnit Test Project | — | Integration tests for the MCP server's Trello connection |
+| `Badminton_MCP` | ASP.NET Core Web (legacy/local MCP server) | 1.1.2 | Legacy local MCP implementation; not used in the current AI workflow |
+| `Badminton_MCP.Tests` | xUnit Test Project | — | Legacy tests for the local MCP server |
 
 ---
 
@@ -190,62 +190,26 @@ Capabilities:
 
 ---
 
-## Badminton_MCP — AI Tooling Server
+## Remote MCP Server — AI Tooling Integration
 
-### Tech Stack
-- `.NET 10`
-- `ASP.NET Core Web` application
-- `ModelContextProtocol.AspNetCore` 1.2.0 — MCP server framework with HTTP/SSE transport
-- `Microsoft.Extensions.Http` — `IHttpClientFactory` (provided by the ASP.NET Core Web SDK)
+### Current Runtime
+- Remote deployed MCP server endpoint: `https://project-management-mcp.onrender.com/mcp`
+- Workspace MCP configuration file: `.vscode/mcp.json`
+- Transport used by workspace: HTTP
 
-### Transport
-JSON-RPC 2.0 over **HTTP/SSE**. The server exposes:
-- `GET /sse` — SSE endpoint for MCP clients (GitHub Copilot, Claude Desktop, Cursor, etc.)
-- `POST /mcp` — Streamable HTTP endpoint (MCP 2025-03-26 spec)
+### Scope
+The remote MCP server is used for project-management workflows and exposes Jira/Trello/GitHub tools for Copilot.
 
-The server is deployed on Render.com and accessible at `https://badminton-mcp.onrender.com`. For local use, run with `dotnet run` and connect via `http://localhost:<port>/sse`.
+### Available Tool Domains
 
-### Registered Tools — Trello
-
-| Tool | Description |
+| Domain | Examples |
 |------|-------------|
-| `GetMyAICards` | Open AI-labelled cards assigned to `TRELLO_MEMBER_ID` |
-| `GetBoardAICards` | All AI-labelled cards on the board, optionally filtered by member |
-| `GetBoardLists` | All lists on the board (used to resolve list IDs) |
-| `MoveCardToList` | Moves a card to a specified list |
-| `AddCommentToCard` | Posts a comment on a card (e.g. PR links) |
+| Jira | project listing, issue search/detail, comments, transitions, issue creation |
+| Trello | boards/lists/cards read and write operations |
+| GitHub | repositories, branches, commits, and issue operations |
 
-### Registered Tools — Badminton API
-
-| Tool | Description |
-|------|-------------|
-| `Login` | Authenticates with username/password, stores JWT for the session |
-| `GetSessions` | All sessions for the authenticated user |
-| `GetDashboardSessions` | Active (Upcoming/OnGoing) sessions only |
-| `GetSessionDetail` | Full session detail — players, payments, matches |
-| `CreateSession` | Create a new session with pricing |
-| `UpdateSession` | Update session fields or change status |
-| `GetMembers` | All members with ranking and stats |
-| `GetMemberById` | Single member full profile |
-| `LookupMemberByContact` | Anonymous lookup by phone/email/Facebook |
-| `AddMemberToSession` | Add a player to a session |
-| `RemoveMemberFromSession` | Remove a player from a session |
-| `UpdateSessionPlayerStatus` | Set player status (Joined/Canceled/Paid/NotPaid) |
-| `SetSessionPricing` | Set male/female pricing for a session |
-| `PaySessionPlayer` | Record a payment from a player |
-
-### Environment Variables
-
-| Variable | Used by |
-|----------|---------|
-| `TRELLO_API_KEY` | All Trello tools |
-| `TRELLO_TOKEN` | All Trello tools |
-| `TRELLO_BOARD_ID` | `GetBoardAICards`, `GetBoardLists`, `MoveCardToList` |
-| `TRELLO_MEMBER_ID` | `GetMyAICards` |
-| `BADMINTON_API_URL` | `BadmintonApiClient` (tools planned for v1.2) |
-
-### Planned for v1.2
-`BadmintonApiClient` is wired into DI but has no tools yet. Planned tools: `GetSessions`, `GetSessionDetail`, `GetMembers`, `GetMemberById`, `GetSessionMatches`, `SetSessionPricing`, `PaySessionPlayer`.
+### Notes
+- The local `Badminton_MCP` project remains in the repository for historical reference, but current team workflow uses the external MCP service.
 
 ---
 
@@ -253,10 +217,10 @@ The server is deployed on Render.com and accessible at `https://badminton-mcp.on
 
 | File | Purpose |
 |------|---------|
-| `.mcp.json` | Local MCP config for GitHub Copilot in VS (gitignored) |
-| `.mcp.json.example` | Committed template |
-| `trello.runsettings` | Local test credentials for VS Test Explorer (gitignored) |
-| `trello.runsettings.example` | Committed template |
+| `.vscode/mcp.json` | Workspace MCP config used by VS Code/Copilot |
+| `.mcp.json.example` | Example MCP config (update to match active remote setup) |
+| `trello.runsettings` | Legacy local test credentials for VS Test Explorer (optional) |
+| `trello.runsettings.example` | Legacy template for local MCP test setup |
 | `docs/mcp-server.md` | MCP server reference documentation |
 | `docs/mcp-workflow.md` | End-to-end AI workflow guide |
 | `docs/version.md` | Version history |

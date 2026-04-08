@@ -1,27 +1,8 @@
 {
   "servers": {
-    "badminton-mcp": {
-      "type": "stdio",
-      "command": "dotnet",
-      "args": [
-        "run",
-        "--project",
-        "Badminton_MCP/Badminton_MCP.csproj",
-        "--no-build"
-      ],
-      "env": {
-        "TRELLO_API_KEY": "YOUR_TRELLO_API_KEY",
-        "TRELLO_TOKEN": "YOUR_TRELLO_TOKEN",
-        "TRELLO_BOARD_ID": "YOUR_TRELLO_BOARD_ID",
-        "TRELLO_MEMBER_ID": "YOUR_TRELLO_MEMBER_ID",
-        "BADMINTON_API_URL": "YOUR_BADMINTON_API_URL",
-        "BADMINTON_API_TOKEN": "YOUR_JWT_TOKEN_OPTIONAL_LEAVE_EMPTY_TO_USE_LOGIN_TOOL"
-      }
-    },
     "badminton-mcp-remote": {
-      "type": "sse",
-      "url": "https://badminton-mcp.onrender.com/sse",
-      "env": {}
+      "type": "http",
+      "url": "https://project-management-mcp.onrender.com/mcp"
     }
   }
 }

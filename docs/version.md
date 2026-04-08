@@ -1,5 +1,23 @@
 # Version History
 
+## v1.1.4 — Remote MCP Documentation Alignment
+> Branch: `master`
+
+### Changed — AI/MCP Documentation
+- Replaced MCP docs to describe the active remote MCP server (`https://project-management-mcp.onrender.com/mcp`) and workspace config in `.vscode/mcp.json`.
+- Updated agent and workflow docs to remove local runtime assumptions for `Badminton_MCP`.
+- Updated current-state documentation to mark local `Badminton_MCP` as legacy/not part of active workflow.
+- Updated `.mcp.json.example` to the active remote HTTP configuration.
+
+### Files
+- `docs/mcp-server.md`
+- `docs/mcp-workflow.md`
+- `docs/agents.md`
+- `docs/ai-task-workflow.md`
+- `docs/current-state.md`
+- `.mcp.json.example`
+- `.github/copilot-instructions.md`
+
 ## v1.1.3 — BA Agent Workflow Update
 > Branch: `master`
 

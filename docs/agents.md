@@ -96,48 +96,39 @@ Examples: `release/v1.0.3`, `release/v2.0.0`
 
 ---
 
-## 3. MCP Trello Tools
+## 3. MCP Project Management Server
 
-**Project:** `Badminton_MCP/`
-**Tools file:** `Badminton_MCP/Tools/TrelloTools.cs`
+**Workspace config:** `.vscode/mcp.json`
+**Remote endpoint:** `https://project-management-mcp.onrender.com/mcp`
 
 ### What It Does
 
-The `Badminton_MCP` project is a [Model Context Protocol](https://modelcontextprotocol.io) server that exposes tools for AI assistants (such as GitHub Copilot) to interact with the Trello board and the Badminton REST API.
+The team uses a remotely deployed MCP server for project-management operations in chat. This server provides Jira, Trello, and GitHub tools used by the agent workflows.
 
-### Trello Tools
+### Main Capabilities
 
-| Tool | Description |
+| System | Typical Operations |
 |---|---|
-| `GetMyAICards` | Returns all open Trello cards assigned to you with the AI label. |
-| `GetBoardAICards` | Returns AI-labelled cards from the full board, optionally filtered by member. |
-| `GetBoardLists` | Returns all lists (columns) on the board to find list IDs. |
-| `MoveCardToList` | Moves a card to a target list (e.g., moves completed cards to "Done"). |
-| `AddCommentToCard` | Posts a comment to a card (e.g., links to the GitHub PR). |
+| Jira | list projects, search issues, read issue detail, add comments, transition status, create issues |
+| Trello | list boards/lists/cards, read card detail, create/update/delete cards |
+| GitHub | list repositories/issues/branches/commits, create/read issues |
 
-### Environment Variables
+### Configuration
 
-| Variable | Description |
-|---|---|
-| `BADMINTON_API_URL` | Base URL of the Badminton REST API. |
-| `TRELLO_API_KEY` | Trello Power-Up API key. |
-| `TRELLO_TOKEN` | Trello user token. |
-| `TRELLO_MEMBER_ID` | Your Trello member ID. |
-| `TRELLO_BOARD_ID` | The Trello board ID to use as default. |
+Use workspace-level MCP config:
 
-### Running Locally
-
-```bash
-cd Badminton_MCP
-export BADMINTON_API_URL=https://your-api.onrender.com
-export TRELLO_API_KEY=your_key
-export TRELLO_TOKEN=your_token
-export TRELLO_MEMBER_ID=your_member_id
-export TRELLO_BOARD_ID=your_board_id
-dotnet run
+```json
+{
+   "servers": {
+      "badminton-mcp-remote": {
+         "type": "http",
+         "url": "https://project-management-mcp.onrender.com/mcp"
+      }
+   }
+}
 ```
 
-The server communicates over **stdio** using the MCP protocol — connect it to any MCP-compatible host (GitHub Copilot, Claude, etc.).
+No local Badminton_MCP runtime is required for normal AI workflow.
 
 ---
 
@@ -216,4 +207,4 @@ Create a label named exactly **`AI`** (case-insensitive) in your Jira project. T
 | Jira AI Agent workflow | Schedule / manual | GitHub Issues assigned to Copilot + Jira comments & estimates |
 | Copilot coding agent | Issue assigned to `@copilot` | Pull Request implementing the ticket |
 | Release Notes Agent workflow | release/* → master PR merge | `docs/releases/<v>.md` + GitHub Release |
-| Badminton_MCP TrelloTools | MCP tool call | Trello read/write via API |
+| Remote MCP server | MCP tool call | Jira/Trello/GitHub read/write via API |

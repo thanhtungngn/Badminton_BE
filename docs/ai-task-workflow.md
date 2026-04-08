@@ -9,7 +9,7 @@ This document defines the end-to-end process for every task that comes from a Tr
 | Step | Rule |
 |------|------|
 | Branch | `AI/<card-slug>` branched from `master` |
-| Version | Bump patch number (`x.y.Z`) in both `.csproj` files before committing |
+| Version | Bump patch number (`x.y.Z`) in `Badminton_BE/Badminton_BE.csproj` before committing |
 | Docs | Update `docs/version.md` with what changed; update `docs/current-state.md` if architecture changes |
 | Commit | Single commit with message `feat|fix: <summary> (vX.Y.Z)` |
 | PR | Opened from `AI/<slug>` → `master` via GitHub CLI |
@@ -20,10 +20,10 @@ This document defines the end-to-end process for every task that comes from a Tr
 ## Step-by-Step
 
 ### 1. Pick up the card
-Use `GetMyAICards` or `GetBoardAICards` in Copilot Chat to list open AI cards.
+Use MCP Jira/Trello tools in Copilot Chat to list open AI work items.
 
 ```
-"What AI Trello cards do I have?"
+"What AI tickets/cards are assigned to me?"
 ```
 
 ### 2. Create the branch
@@ -47,7 +47,7 @@ Required before committing:
 - `docs/current-state.md` — update if any capability, endpoint, or model changed
 
 ### 4. Bump version
-Both `.csproj` files must share the same version. Bump only the patch digit.
+Bump only the patch digit for the API project version.
 
 ```
 1.1.0  →  1.1.1
@@ -56,7 +56,6 @@ Both `.csproj` files must share the same version. Bump only the patch digit.
 
 Files to update:
 - `Badminton_BE/Badminton_BE.csproj` → `<Version>X.Y.Z</Version>`
-- `Badminton_MCP/Badminton_MCP.csproj` → `<Version>X.Y.Z</Version>`
 
 ### 5. Build and verify
 ```powershell
@@ -122,7 +121,7 @@ The finish script also:
 ## Environment Variables Required
 
 The finish script reads Trello credentials from environment variables.
-These are the same ones used in `.mcp.json` and `trello.runsettings`.
+These are used by the finish script only.
 
 | Variable | Purpose |
 |----------|---------|
