@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using System.Threading.Tasks;
 using Badminton_BE.Services;
+using Badminton_BE.Services.Interfaces;
 using Badminton_BE.DTOs;
 using Swashbuckle.AspNetCore.Annotations;
 using Microsoft.AspNetCore.Http;
@@ -12,10 +13,12 @@ namespace Badminton_BE.Controllers
     public class PaymentController : ControllerBase
     {
         private readonly IPaymentService _service;
+        private readonly INotificationService _notificationService;
 
-        public PaymentController(IPaymentService service)
+        public PaymentController(IPaymentService service, INotificationService notificationService)
         {
             _service = service;
+            _notificationService = notificationService;
         }
 
         [HttpPost("session/{sessionId}")]
@@ -46,6 +49,22 @@ namespace Badminton_BE.Controllers
             var r = await _service.UpdateAmountDueAsync(sessionPlayerId, dto.AmountDue);
             if (r == null) return NotFound();
             return Ok(r);
+        }
+
+        /// <summary>
+        /// Confirm a player's payment in full. Sets status to Paid and triggers an owner notification.
+        /// </summary>
+        [HttpPost("session-player/{sessionPlayerId}/confirm")]
+        [SwaggerResponse(StatusCodes.Status200OK, "Payment confirmed", typeof(PlayerPaymentReadDto))]
+        [SwaggerResponse(StatusCodes.Status404NotFound, "Player payment not found")]
+        public async Task<IActionResult> ConfirmPlayerPayment(int sessionPlayerId)
+        {
+            var result = await _service.ConfirmPlayerPaymentAsync(sessionPlayerId);
+            if (result == null) return NotFound();
+
+            await _notificationService.TriggerPaymentRecordedAsync(sessionPlayerId);
+
+            return Ok(result);
         }
     }
 }

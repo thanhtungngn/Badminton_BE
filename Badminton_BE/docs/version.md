@@ -1,55 +1,6 @@
 # Version History
 
-## v1.1.6 — BCM-108/109/110/111: Notification Service, APIs, Confirm Payment & Reminder Job
-> Branch: `feature/BCM-105`
-
-### Added — Notification System (Service + API layer)
-- **BCM-108** `INotificationService` / `NotificationService` with three trigger methods:
-  - `TriggerPriceChangedAsync` — creates a `PriceChanged` notification when session pricing is updated.
-  - `TriggerPaymentRecordedAsync` — creates a `PaymentRecorded` notification when a player payment is confirmed.
-  - `TriggerUnpaidReminderAsync` — creates an `UnpaidReminder` notification; idempotent (one per session per day).
-- **BCM-109** `INotificationRepository` / `NotificationRepository` with paged query, unread count, mark-one-read, mark-all-read, and today-exists check.
-- **BCM-109** `NotificationController` with four endpoints:
-  - `GET /api/notification?page=1&pageSize=20` — paginated notification list.
-  - `GET /api/notification/unread-count` — unread badge count.
-  - `PATCH /api/notification/{id}/read` — mark one as read.
-  - `PATCH /api/notification/read-all` — mark all as read.
-- **BCM-110** `POST /api/payment/session-player/{id}/confirm` — confirms a player's payment in full (sets `Paid` status on both `PlayerPayment` and `SessionPlayer`) and triggers a `PaymentRecorded` notification.
-- **BCM-111** `POST /api/notification/trigger-reminder` — manual trigger that processes all `OnGoing` sessions, creates `UnpaidReminder` notifications, and skips sessions already reminded today. Returns processed/created/skipped counts.
-- New DTOs: `NotificationReadDto`, `UnreadCountDto`, `NotificationPagedDto`, `TriggerReminderResultDto`.
-- Registered `INotificationRepository` and `INotificationService` in DI.
-
-### Files
-- `Badminton_BE/DTOs/NotificationDtos.cs` *(new)*
-- `Badminton_BE/Repositories/Interfaces/INotificationRepository.cs` *(new)*
-- `Badminton_BE/Repositories/NotificationRepository.cs` *(new)*
-- `Badminton_BE/Services/Interfaces/INotificationService.cs` *(new)*
-- `Badminton_BE/Services/NotificationService.cs` *(new)*
-- `Badminton_BE/Controllers/NotificationController.cs` *(new)*
-- `Badminton_BE/Services/Interfaces/IPaymentService.cs`
-- `Badminton_BE/Services/PaymentService.cs`
-- `Badminton_BE/Controllers/PaymentController.cs`
-- `Badminton_BE/Program.cs`
-
-## v1.1.5
-> Branch: `feature/BCM-105`
-
-### Added — Notification System (Data Layer)
-- New `NotificationType` enum: `PriceChanged`, `PaymentRecorded`, `UnpaidReminder` (stored as string).
-- New `Notification` model implementing `IEntity` + `IUserOwnedEntity` with fields: `UserId`, `SessionId` (nullable FK to `Session`), `Type`, `IsRead`, `Payload` (JSON string, max 2000 chars).
-- Registered `DbSet<Notification>` in `AppDbContext` with:
-  - `UserId` query filter for tenant isolation.
-  - Composite index on `(UserId, IsRead)` for unread badge queries.
-  - Composite index on `(UserId, CreatedDate)` for timeline ordering.
-  - `OnDelete(SetNull)` on `SessionId` FK so notifications survive session deletion.
-- EF Core migration `AddNotification` generated.
-
-### Files
-- `Badminton_BE/Models/Notification.cs` *(new)*
-- `Badminton_BE/Data/AppDbContext.cs`
-- `Badminton_BE/Migrations/..._AddNotification.cs` *(new)*
-
-
+## v1.1.4 — Remote MCP Documentation Alignment
 > Branch: `master`
 
 ### Changed — AI/MCP Documentation

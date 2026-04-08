@@ -1,4 +1,11 @@
 <Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".github/agents/jira-ba-agent.md" />
+    <File Path="docs/agents/jira-ba-agent.md" />
+    <File Path="docs/agents/jira-dev-agent.md" />
+    <File Path="docs/agents/release-notes-agent.md" />
+    <File Path="docs/agents/trello-agent.md" />
+  </Folder>
   <Project Path="Badminton_BE/Badminton_BE.csproj" />
   <Project Path="Badminton_MCP.Tests/Badminton_MCP.Tests.csproj" />
   <Project Path="Badminton_MCP/Badminton_MCP.csproj" />
