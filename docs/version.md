@@ -1,5 +1,18 @@
 # Version History
 
+## v1.1.8 — BCM-105: Final Payment Verification Flow & Target Safeties
+> Branch: `feature/BCM-105`
+
+### Fixed — Notification Delivery & Session Data Protection
+- **Session Serialization Protection:** Updated `SessionWithPlayersDto` and `SessionService` to explicitly map `Title`, `Description`, and `Status`. This permanently blocks the session update endpoint from destructively saving empty strings to the database via empty mapping loops when updating session metadata.
+- **Embedded Target Deliveries:** `TriggerPaymentRecordedAsync` in `NotificationService` now strictly evaluates the embedded Host target via `session.UserId` rather than `_currentUserService.UserId`. This resolves an architecture block where fully anonymous players were erroneously restricted from emitting valid notification triggers up to the Host.
+- **Dangling Payment Cleanup:** Refined API consumption logic explicitly maps to `PaymentService.ConfirmPlayerPaymentAsync` safely without spawning unmonitored duplicate network pipelines logic.
+
+### Files
+- `Badminton_BE/DTOs/SessionWithPlayersDto.cs`
+- `Badminton_BE/Services/NotificationService.cs`
+- `Badminton_BE/Services/SessionService.cs`
+
 ## v1.1.7 — BCM-105: Notification system review feedback applied
 > Branch: `feature/BCM-105`
 
