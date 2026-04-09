@@ -5,6 +5,7 @@ using Badminton_BE.Services.Interfaces;
 using Badminton_BE.DTOs;
 using Swashbuckle.AspNetCore.Annotations;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Authorization;
 
 namespace Badminton_BE.Controllers
 {
@@ -55,6 +56,7 @@ namespace Badminton_BE.Controllers
         /// Player signals they have paid. Sets status to ConfirmationPending — awaiting owner approval.
         /// </summary>
         [HttpPost("session-player/{sessionPlayerId}/confirm")]
+        [AllowAnonymous]
         [SwaggerResponse(StatusCodes.Status200OK, "Payment pending confirmation", typeof(PlayerPaymentReadDto))]
         [SwaggerResponse(StatusCodes.Status404NotFound, "Player payment not found")]
         public async Task<IActionResult> ConfirmPlayerPayment(int sessionPlayerId)
