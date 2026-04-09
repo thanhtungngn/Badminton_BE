@@ -48,7 +48,16 @@ Badminton_MCP/          ← MCP server (tool extensions)
    - Example: feature ticket `SB-42` → `feature/SB-42`; bug ticket `SB-99` → `bug/SB-99`
    - Determine type from the Jira issue type field (Story / Feature → `feature/`, Bug → `bug/`).
 2. **Implement** — make only the changes needed to fulfil the ticket.
-3. **Document** — update `docs/version.md`; update `docs/current-state.md` if the API surface or data model changed; create `docs/releases/vX.Y.Z.md` for the new version.
+3. **Document** — before committing:
+   - Update `docs/version.md` with a changelog entry for the new version.
+   - Update `docs/current-state.md` if the API surface, data model, or project structure changed.
+   - Create `docs/releases/vX.Y.Z.md` describing what changed in plain language.
+   - Register the new release doc in `Badminton_BE/Badminton_BE.csproj` under `<ItemGroup>` as a `<None Include>` link — **this must be committed before pushing**:
+     ```xml
+     <None Include="..\docs\releases\vX.Y.Z.md">
+       <Link>docs\releases\vX.Y.Z.md</Link>
+     </None>
+     ```
 4. **Bump version** — increment patch in `Badminton_BE/Badminton_BE.csproj` and `Badminton_MCP/Badminton_MCP.csproj` **once when the branch is created**. Do not bump again on subsequent commits to the same branch.
 5. **Build** — run `dotnet build` and fix any errors.
 6. **PR** — open a PR to `master`.
@@ -73,6 +82,7 @@ Badminton_MCP/          ← MCP server (tool extensions)
 - Body references both the GitHub issue and the Jira ticket URL.
 - Include migration files if schema changed.
 - `docs/version.md` must be updated.
+- `docs/releases/vX.Y.Z.md` must exist and be linked in `Badminton_BE.csproj` before the PR is opened.
 
 ## Jira Ticket Identifier
 
