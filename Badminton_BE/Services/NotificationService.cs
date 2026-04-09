@@ -50,8 +50,6 @@ namespace Badminton_BE.Services
 
         public async Task TriggerPaymentRecordedAsync(int sessionPlayerId)
         {
-            if (!_currentUser.UserId.HasValue) return;
-
             var sessionPlayer = await _db.SessionPlayers
                 .Include(sp => sp.Session)
                 .Include(sp => sp.Member)
@@ -68,7 +66,7 @@ namespace Badminton_BE.Services
 
             await _repo.AddAsync(new Notification
             {
-                UserId = _currentUser.UserId.Value,
+                UserId = sessionPlayer.Session.UserId, // Safely notify the Host, even if player is anonymous
                 SessionId = sessionPlayer.SessionId,
                 Type = NotificationType.PaymentRecorded,
                 Payload = payload

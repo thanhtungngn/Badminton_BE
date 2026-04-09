@@ -44,6 +44,8 @@ namespace Badminton_BE.Services
             var dto = new SessionWithPlayersDto
             {
                 Id = s.Id.ToString(),
+                Title = s.Title,
+                Description = s.Description,
                 Address = s.Address,
                 DateCreated = s.StartTime,
                 Courts = s.NumberOfCourts,
@@ -94,7 +96,8 @@ namespace Badminton_BE.Services
                         EloPoint = sp.Member.PlayerRanking?.EloPoint,
                         PaidStatus = payment != null ? (payment.PaidStatus == PaymentStatus.Paid) : (bool?)null,
                         PlayerPaymentId = payment?.Id,
-                        Price = price
+                        Price = price,
+                        Status = (int)sp.Status
                     });
                 }
             }
