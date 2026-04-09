@@ -17,7 +17,7 @@ When you are assigned a GitHub Issue created from a Jira ticket, your job is to:
 - **Multi-tenancy:** Every domain table must include a `UserId` column. All data queries must filter by the authenticated user's ID. Exception: `PlayerRanking` — no `UserId` filtering.
 - **DTOs and Models:** Never define DTO or Model classes inside service classes. Always place them in their own file under `DTOs/` or `Models/`.
 - **Version tracking:** Every code change must be documented in `docs/version.md` and `docs/current-state.md` (if architecture changed).
-- **Version bump:** Increment the patch digit in both `.csproj` files before committing.
+- **Version bump:** Increment the patch digit in both `.csproj` files **once per ticket/branch** — at the start of the branch, not on every commit. All commits on the same branch share the same version number. Create a release document under `docs/releases/vX.Y.Z.md` when the version is bumped.
 - **Naming:** PascalCase for C# types and members. camelCase in JSON responses.
 - **Architecture:** Repository → Service → Controller layered pattern.
 - **Database:** EF Core with MySQL (Pomelo). Run `dotnet ef migrations add <Name>` whenever the schema changes.
@@ -48,8 +48,8 @@ Badminton_MCP/          ← MCP server (tool extensions)
    - Example: feature ticket `SB-42` → `feature/SB-42`; bug ticket `SB-99` → `bug/SB-99`
    - Determine type from the Jira issue type field (Story / Feature → `feature/`, Bug → `bug/`).
 2. **Implement** — make only the changes needed to fulfil the ticket.
-3. **Document** — update `docs/version.md`; update `docs/current-state.md` if the API surface or data model changed.
-4. **Bump version** — increment patch in `Badminton_BE/Badminton_BE.csproj` and `Badminton_MCP/Badminton_MCP.csproj`.
+3. **Document** — update `docs/version.md`; update `docs/current-state.md` if the API surface or data model changed; create `docs/releases/vX.Y.Z.md` for the new version.
+4. **Bump version** — increment patch in `Badminton_BE/Badminton_BE.csproj` and `Badminton_MCP/Badminton_MCP.csproj` **once when the branch is created**. Do not bump again on subsequent commits to the same branch.
 5. **Build** — run `dotnet build` and fix any errors.
 6. **PR** — open a PR to `master`.
    - Title format: `feat|fix|chore: <summary> (vX.Y.Z)`

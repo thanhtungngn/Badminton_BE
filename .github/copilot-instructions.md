@@ -24,8 +24,8 @@ When working on a Trello card tagged with the **AI** label, always follow this s
    - Add an entry to `docs/version.md` describing what changed.
    - Update `docs/current-state.md` if any capability, endpoint, model, or project structure changed.
 
-4. **Bump patch version** — increment the last digit of `<Version>` in both:
-   - `Badminton_BE/Badminton_BE.csproj`
+4. **Bump patch version** — increment the last digit of `<Version>` in both `.csproj` files **once when the branch is created**, not on every commit. All commits on the same branch share the same version.
+   - Also create `docs/releases/vX.Y.Z.md` for the new version.
    - Example: `1.1.0` → `1.1.1`
 
 5. **Commit and push** — single commit: `fix|feat|chore: <summary> (vX.Y.Z)`
