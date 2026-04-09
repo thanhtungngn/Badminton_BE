@@ -7,7 +7,8 @@ namespace Badminton_BE.Models
         Joined = 0,
         Canceled = 1,
         Paid = 2,
-        NotPaid = 3
+        NotPaid = 3,
+        ConfirmationPending = 4
     }
 
     public class SessionPlayer : IEntity, IUserOwnedEntity

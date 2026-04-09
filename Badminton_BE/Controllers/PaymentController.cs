@@ -52,10 +52,10 @@ namespace Badminton_BE.Controllers
         }
 
         /// <summary>
-        /// Confirm a player's payment in full. Sets status to Paid and triggers an owner notification.
+        /// Player signals they have paid. Sets status to ConfirmationPending — awaiting owner approval.
         /// </summary>
         [HttpPost("session-player/{sessionPlayerId}/confirm")]
-        [SwaggerResponse(StatusCodes.Status200OK, "Payment confirmed", typeof(PlayerPaymentReadDto))]
+        [SwaggerResponse(StatusCodes.Status200OK, "Payment pending confirmation", typeof(PlayerPaymentReadDto))]
         [SwaggerResponse(StatusCodes.Status404NotFound, "Player payment not found")]
         public async Task<IActionResult> ConfirmPlayerPayment(int sessionPlayerId)
         {
@@ -64,6 +64,19 @@ namespace Badminton_BE.Controllers
 
             await _notificationService.TriggerPaymentRecordedAsync(sessionPlayerId);
 
+            return Ok(result);
+        }
+
+        /// <summary>
+        /// Owner approves a player's pending payment. Sets status to Paid.
+        /// </summary>
+        [HttpPost("session-player/{sessionPlayerId}/approve")]
+        [SwaggerResponse(StatusCodes.Status200OK, "Payment approved and marked as Paid", typeof(PlayerPaymentReadDto))]
+        [SwaggerResponse(StatusCodes.Status404NotFound, "Player payment not found")]
+        public async Task<IActionResult> ApprovePlayerPayment(int sessionPlayerId)
+        {
+            var result = await _service.ApprovePlayerPaymentAsync(sessionPlayerId);
+            if (result == null) return NotFound();
             return Ok(result);
         }
     }

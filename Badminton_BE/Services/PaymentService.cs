@@ -228,7 +228,27 @@ namespace Badminton_BE.Services
             var pp = await _playerPaymentRepo.GetBySessionPlayerIdAsync(sessionPlayerId);
             if (pp == null) return null;
 
-            if (pp.PaidStatus == PaymentStatus.Paid) return new PlayerPaymentReadDto
+            if (pp.PaidStatus == PaymentStatus.Paid || pp.PaidStatus == PaymentStatus.ConfirmationPending)
+                return new PlayerPaymentReadDto
+                {
+                    Id = pp.Id,
+                    SessionPlayerId = pp.SessionPlayerId,
+                    AmountDue = pp.AmountDue,
+                    AmountPaid = pp.AmountPaid,
+                    PaidStatus = pp.PaidStatus.ToString(),
+                    PaidAt = pp.PaidAt
+                };
+
+            pp.PaidStatus = PaymentStatus.ConfirmationPending;
+
+            var sessionPlayer = await _sessionPlayerRepo.GetByIdWithIncludesAsync(sessionPlayerId);
+            if (sessionPlayer != null)
+                sessionPlayer.Status = SessionPlayerStatus.ConfirmationPending;
+
+            _playerPaymentRepo.Update(pp);
+            await _playerPaymentRepo.SaveChangesAsync();
+
+            return new PlayerPaymentReadDto
             {
                 Id = pp.Id,
                 SessionPlayerId = pp.SessionPlayerId,
@@ -237,6 +257,12 @@ namespace Badminton_BE.Services
                 PaidStatus = pp.PaidStatus.ToString(),
                 PaidAt = pp.PaidAt
             };
+        }
+
+        public async Task<PlayerPaymentReadDto?> ApprovePlayerPaymentAsync(int sessionPlayerId)
+        {
+            var pp = await _playerPaymentRepo.GetBySessionPlayerIdAsync(sessionPlayerId);
+            if (pp == null) return null;
 
             pp.AmountPaid = pp.AmountDue;
             pp.PaidStatus = PaymentStatus.Paid;
@@ -244,9 +270,7 @@ namespace Badminton_BE.Services
 
             var sessionPlayer = await _sessionPlayerRepo.GetByIdWithIncludesAsync(sessionPlayerId);
             if (sessionPlayer != null)
-            {
                 sessionPlayer.Status = SessionPlayerStatus.Paid;
-            }
 
             _playerPaymentRepo.Update(pp);
             await _playerPaymentRepo.SaveChangesAsync();

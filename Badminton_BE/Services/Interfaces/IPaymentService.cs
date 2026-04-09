@@ -14,5 +14,6 @@ namespace Badminton_BE.Services.Interfaces
         Task<PlayerPaymentReadDto?> PayBySessionPlayerIdAsync(int sessionPlayerId, decimal amount);
         Task<PlayerPaymentReadDto?> UpdateAmountDueAsync(int sessionPlayerId, decimal newAmountDue);
         Task<PlayerPaymentReadDto?> ConfirmPlayerPaymentAsync(int sessionPlayerId);
+        Task<PlayerPaymentReadDto?> ApprovePlayerPaymentAsync(int sessionPlayerId);
     }
 }

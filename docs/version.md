@@ -1,6 +1,30 @@
 # Version History
 
-## v1.1.6 — BCM-108/109/110/111: Notification Service, APIs, Confirm Payment & Reminder Job
+## v1.1.7 — BCM-110: Two-step payment confirmation (Pending + Approve)
+> Branch: `feature/BCM-105`
+
+### Changed — Payment confirmation flow
+- `PaymentStatus` enum: added `ConfirmationPending = 3`.
+- `SessionPlayerStatus` enum: added `ConfirmationPending = 4`.
+- `POST /api/payment/session-player/{id}/confirm` — now sets status to `ConfirmationPending` and triggers a `PaymentRecorded` notification to the owner. No longer marks as `Paid` directly.
+- New `POST /api/payment/session-player/{id}/approve` — owner-only step that sets `PlayerPayment.PaidStatus = Paid`, `SessionPlayer.Status = Paid`, and `PaidAt = UtcNow`.
+- EF Core migration `AddConfirmationPendingStatus` generated.
+
+### Flow
+```
+Player  → POST /confirm → status: ConfirmationPending + owner notification
+Owner   → POST /approve → status: Paid
+```
+
+### Files
+- `Badminton_BE/Models/PlayerPayment.cs`
+- `Badminton_BE/Models/SessionPlayer.cs`
+- `Badminton_BE/Services/Interfaces/IPaymentService.cs`
+- `Badminton_BE/Services/PaymentService.cs`
+- `Badminton_BE/Controllers/PaymentController.cs`
+- `Badminton_BE/Migrations/..._AddConfirmationPendingStatus.cs` *(new)*
+
+## v1.1.6
 > Branch: `feature/BCM-105`
 
 ### Added — Notification System (Service + API layer)
