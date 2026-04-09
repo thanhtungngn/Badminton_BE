@@ -64,9 +64,10 @@ namespace Badminton_BE.Controllers
             var result = await _service.ConfirmPlayerPaymentAsync(sessionPlayerId);
             if (result == null) return NotFound();
 
-            await _notificationService.TriggerPaymentRecordedAsync(sessionPlayerId);
+            if (result.WasTransitioned)
+                await _notificationService.TriggerPaymentRecordedAsync(sessionPlayerId);
 
-            return Ok(result);
+            return Ok(result.Dto);
         }
 
         /// <summary>

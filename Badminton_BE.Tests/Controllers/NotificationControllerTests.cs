@@ -113,14 +113,13 @@ public class NotificationControllerTests
     }
 
     [Fact]
-    public async Task TriggerReminder_WithOngoingSession_NotYetReminded_CreatesNotification()
+    public async Task TriggerReminder_WithOngoingSession_WhenReminderCreated_IncrementsCreated()
     {
         var user = new TestCurrentUserService();
         var db = DbContextFactory.Create(user);
         db.Sessions.Add(new Session { Id = 1, UserId = 1, Title = "S", Address = "A", StartTime = DateTime.UtcNow, EndTime = DateTime.UtcNow.AddHours(2), Status = SessionStatus.OnGoing });
         await db.SaveChangesAsync();
-        _repoMock.Setup(r => r.ExistsTodayAsync(1, NotificationType.UnpaidReminder)).ReturnsAsync(false);
-        _serviceMock.Setup(s => s.TriggerUnpaidReminderAsync(1)).Returns(Task.CompletedTask);
+        _serviceMock.Setup(s => s.TriggerUnpaidReminderAsync(1)).ReturnsAsync(true);
 
         var result = await CreateController(db).TriggerReminder();
 
@@ -132,13 +131,13 @@ public class NotificationControllerTests
     }
 
     [Fact]
-    public async Task TriggerReminder_WhenAlreadyRemindedToday_SkipsSession()
+    public async Task TriggerReminder_WhenReminderNotCreated_IncrementsSkipped()
     {
         var user = new TestCurrentUserService();
         var db = DbContextFactory.Create(user);
         db.Sessions.Add(new Session { Id = 1, UserId = 1, Title = "S", Address = "A", StartTime = DateTime.UtcNow, EndTime = DateTime.UtcNow.AddHours(2), Status = SessionStatus.OnGoing });
         await db.SaveChangesAsync();
-        _repoMock.Setup(r => r.ExistsTodayAsync(1, NotificationType.UnpaidReminder)).ReturnsAsync(true);
+        _serviceMock.Setup(s => s.TriggerUnpaidReminderAsync(1)).ReturnsAsync(false);
 
         var result = await CreateController(db).TriggerReminder();
 
@@ -146,6 +145,6 @@ public class NotificationControllerTests
         var dto = Assert.IsType<TriggerReminderResultDto>(ok.Value);
         Assert.Equal(1, dto.Skipped);
         Assert.Equal(0, dto.NotificationsCreated);
-        _serviceMock.Verify(s => s.TriggerUnpaidReminderAsync(It.IsAny<int>()), Times.Never);
+        _serviceMock.Verify(s => s.TriggerUnpaidReminderAsync(It.IsAny<int>()), Times.Once);
     }
 }

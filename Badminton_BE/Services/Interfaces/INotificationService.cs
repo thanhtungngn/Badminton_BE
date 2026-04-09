@@ -6,6 +6,6 @@ namespace Badminton_BE.Services.Interfaces
     {
         Task TriggerPriceChangedAsync(int sessionId, decimal priceMale, decimal priceFemale);
         Task TriggerPaymentRecordedAsync(int sessionPlayerId);
-        Task TriggerUnpaidReminderAsync(int sessionId);
+        Task<bool> TriggerUnpaidReminderAsync(int sessionId);
     }
 }

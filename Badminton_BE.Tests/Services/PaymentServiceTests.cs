@@ -1,6 +1,8 @@
+using Badminton_BE.DTOs;
 using Badminton_BE.Models;
 using Badminton_BE.Repositories.Interfaces;
 using Badminton_BE.Services;
+using Badminton_BE.Services.Interfaces;
 using Moq;
 
 namespace Badminton_BE.Tests.Services;
@@ -11,12 +13,14 @@ public class PaymentServiceTests
     private readonly Mock<IPlayerPaymentRepository> _playerPaymentRepo = new();
     private readonly Mock<ISessionRepository> _sessionRepo = new();
     private readonly Mock<ISessionPlayerRepository> _sessionPlayerRepo = new();
+    private readonly Mock<INotificationService> _notificationService = new();
 
     private PaymentService CreateService() => new(
         _sessionPaymentRepo.Object,
         _playerPaymentRepo.Object,
         _sessionRepo.Object,
-        _sessionPlayerRepo.Object);
+        _sessionPlayerRepo.Object,
+        _notificationService.Object);
 
     // ── ConfirmPlayerPaymentAsync ─────────────────────────────────────────
 
@@ -32,7 +36,7 @@ public class PaymentServiceTests
     }
 
     [Fact]
-    public async Task ConfirmPlayerPaymentAsync_WhenAlreadyPaid_ReturnsDtoWithoutSaving()
+    public async Task ConfirmPlayerPaymentAsync_WhenAlreadyPaid_ReturnsDtoWithoutSavingAndWasTransitionedFalse()
     {
         var payment = new PlayerPayment { Id = 1, SessionPlayerId = 1, PaidStatus = PaymentStatus.Paid };
         _playerPaymentRepo.Setup(r => r.GetBySessionPlayerIdAsync(1)).ReturnsAsync(payment);
@@ -40,13 +44,14 @@ public class PaymentServiceTests
         var result = await CreateService().ConfirmPlayerPaymentAsync(1);
 
         Assert.NotNull(result);
-        Assert.Equal("Paid", result.PaidStatus);
+        Assert.Equal("Paid", result.Dto!.PaidStatus);
+        Assert.False(result.WasTransitioned);
         _playerPaymentRepo.Verify(r => r.Update(It.IsAny<PlayerPayment>()), Times.Never);
         _playerPaymentRepo.Verify(r => r.SaveChangesAsync(), Times.Never);
     }
 
     [Fact]
-    public async Task ConfirmPlayerPaymentAsync_WhenAlreadyPending_ReturnsDtoWithoutSaving()
+    public async Task ConfirmPlayerPaymentAsync_WhenAlreadyPending_ReturnsDtoWithoutSavingAndWasTransitionedFalse()
     {
         var payment = new PlayerPayment { Id = 1, SessionPlayerId = 1, PaidStatus = PaymentStatus.ConfirmationPending };
         _playerPaymentRepo.Setup(r => r.GetBySessionPlayerIdAsync(1)).ReturnsAsync(payment);
@@ -54,12 +59,13 @@ public class PaymentServiceTests
         var result = await CreateService().ConfirmPlayerPaymentAsync(1);
 
         Assert.NotNull(result);
-        Assert.Equal("ConfirmationPending", result.PaidStatus);
+        Assert.Equal("ConfirmationPending", result.Dto!.PaidStatus);
+        Assert.False(result.WasTransitioned);
         _playerPaymentRepo.Verify(r => r.Update(It.IsAny<PlayerPayment>()), Times.Never);
     }
 
     [Fact]
-    public async Task ConfirmPlayerPaymentAsync_WhenNotPaid_SetsConfirmationPendingAndSaves()
+    public async Task ConfirmPlayerPaymentAsync_WhenNotPaid_SetsConfirmationPendingAndSavesAndWasTransitionedTrue()
     {
         var payment = new PlayerPayment { Id = 1, SessionPlayerId = 1, AmountDue = 50m, PaidStatus = PaymentStatus.NotPaid };
         _playerPaymentRepo.Setup(r => r.GetBySessionPlayerIdAsync(1)).ReturnsAsync(payment);
@@ -68,7 +74,8 @@ public class PaymentServiceTests
         var result = await CreateService().ConfirmPlayerPaymentAsync(1);
 
         Assert.NotNull(result);
-        Assert.Equal("ConfirmationPending", result.PaidStatus);
+        Assert.Equal("ConfirmationPending", result.Dto!.PaidStatus);
+        Assert.True(result.WasTransitioned);
         _playerPaymentRepo.Verify(r => r.Update(It.IsAny<PlayerPayment>()), Times.Once);
         _playerPaymentRepo.Verify(r => r.SaveChangesAsync(), Times.Once);
     }

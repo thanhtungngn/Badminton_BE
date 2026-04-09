@@ -117,15 +117,11 @@ namespace Badminton_BE.Controllers
 
             foreach (var session in ongoingSessions)
             {
-                var alreadyToday = await _repo.ExistsTodayAsync(session.Id, NotificationType.UnpaidReminder);
-                if (alreadyToday)
-                {
+                var wasCreated = await _service.TriggerUnpaidReminderAsync(session.Id);
+                if (wasCreated)
+                    created++;
+                else
                     skipped++;
-                    continue;
-                }
-
-                await _service.TriggerUnpaidReminderAsync(session.Id);
-                created++;
             }
 
             return Ok(new TriggerReminderResultDto

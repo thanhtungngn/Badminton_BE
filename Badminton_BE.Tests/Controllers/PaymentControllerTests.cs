@@ -21,7 +21,7 @@ public class PaymentControllerTests
     public async Task ConfirmPlayerPayment_WhenPaymentNotFound_Returns404()
     {
         _paymentService.Setup(s => s.ConfirmPlayerPaymentAsync(1))
-            .ReturnsAsync((PlayerPaymentReadDto?)null);
+            .ReturnsAsync((ConfirmPaymentResult?)null);
 
         var result = await CreateController().ConfirmPlayerPayment(1);
 
@@ -32,7 +32,7 @@ public class PaymentControllerTests
     public async Task ConfirmPlayerPayment_WhenSucceeds_Returns200WithDto()
     {
         var dto = new PlayerPaymentReadDto { Id = 1, SessionPlayerId = 1, PaidStatus = "ConfirmationPending" };
-        _paymentService.Setup(s => s.ConfirmPlayerPaymentAsync(1)).ReturnsAsync(dto);
+        _paymentService.Setup(s => s.ConfirmPlayerPaymentAsync(1)).ReturnsAsync(new ConfirmPaymentResult(dto, true));
         _notificationService.Setup(s => s.TriggerPaymentRecordedAsync(1)).Returns(Task.CompletedTask);
 
         var result = await CreateController().ConfirmPlayerPayment(1);
@@ -42,15 +42,26 @@ public class PaymentControllerTests
     }
 
     [Fact]
-    public async Task ConfirmPlayerPayment_WhenSucceeds_TriggersNotification()
+    public async Task ConfirmPlayerPayment_WhenWasTransitioned_TriggersNotification()
     {
         var dto = new PlayerPaymentReadDto { Id = 1, SessionPlayerId = 1, PaidStatus = "ConfirmationPending" };
-        _paymentService.Setup(s => s.ConfirmPlayerPaymentAsync(1)).ReturnsAsync(dto);
+        _paymentService.Setup(s => s.ConfirmPlayerPaymentAsync(1)).ReturnsAsync(new ConfirmPaymentResult(dto, true));
         _notificationService.Setup(s => s.TriggerPaymentRecordedAsync(1)).Returns(Task.CompletedTask);
 
         await CreateController().ConfirmPlayerPayment(1);
 
         _notificationService.Verify(s => s.TriggerPaymentRecordedAsync(1), Times.Once);
+    }
+
+    [Fact]
+    public async Task ConfirmPlayerPayment_WhenAlreadyConfirmed_DoesNotTriggerNotification()
+    {
+        var dto = new PlayerPaymentReadDto { Id = 1, SessionPlayerId = 1, PaidStatus = "ConfirmationPending" };
+        _paymentService.Setup(s => s.ConfirmPlayerPaymentAsync(1)).ReturnsAsync(new ConfirmPaymentResult(dto, false));
+
+        await CreateController().ConfirmPlayerPayment(1);
+
+        _notificationService.Verify(s => s.TriggerPaymentRecordedAsync(It.IsAny<int>()), Times.Never);
     }
 
     // ── ApprovePlayerPayment ──────────────────────────────────────────────

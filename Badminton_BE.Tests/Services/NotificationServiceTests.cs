@@ -96,8 +96,9 @@ public class NotificationServiceTests
     [Fact]
     public async Task TriggerUnpaidReminderAsync_WhenNotAuthenticated_DoesNothing()
     {
-        await CreateService(TestCurrentUserService.Unauthenticated).TriggerUnpaidReminderAsync(1);
+        var result = await CreateService(TestCurrentUserService.Unauthenticated).TriggerUnpaidReminderAsync(1);
 
+        Assert.False(result);
         _repoMock.Verify(r => r.AddAsync(It.IsAny<Notification>()), Times.Never);
     }
 
@@ -106,8 +107,9 @@ public class NotificationServiceTests
     {
         _repoMock.Setup(r => r.ExistsTodayAsync(1, NotificationType.UnpaidReminder)).ReturnsAsync(true);
 
-        await CreateService().TriggerUnpaidReminderAsync(1);
+        var result = await CreateService().TriggerUnpaidReminderAsync(1);
 
+        Assert.False(result);
         _repoMock.Verify(r => r.AddAsync(It.IsAny<Notification>()), Times.Never);
     }
 
@@ -116,8 +118,9 @@ public class NotificationServiceTests
     {
         _repoMock.Setup(r => r.ExistsTodayAsync(999, NotificationType.UnpaidReminder)).ReturnsAsync(false);
 
-        await CreateService().TriggerUnpaidReminderAsync(999);
+        var result = await CreateService().TriggerUnpaidReminderAsync(999);
 
+        Assert.False(result);
         _repoMock.Verify(r => r.AddAsync(It.IsAny<Notification>()), Times.Never);
     }
 
@@ -130,13 +133,14 @@ public class NotificationServiceTests
         db.Sessions.Add(MakeSession());
         await db.SaveChangesAsync();
 
-        await CreateService(user, db).TriggerUnpaidReminderAsync(1);
+        var result = await CreateService(user, db).TriggerUnpaidReminderAsync(1);
 
+        Assert.False(result);
         _repoMock.Verify(r => r.AddAsync(It.IsAny<Notification>()), Times.Never);
     }
 
     [Fact]
-    public async Task TriggerUnpaidReminderAsync_WhenUnpaidPlayersExist_CreatesNotification()
+    public async Task TriggerUnpaidReminderAsync_WhenUnpaidPlayersExist_CreatesNotificationAndReturnsTrue()
     {
         _repoMock.Setup(r => r.ExistsTodayAsync(1, NotificationType.UnpaidReminder)).ReturnsAsync(false);
         var user = new TestCurrentUserService();
@@ -149,8 +153,9 @@ public class NotificationServiceTests
         db.PlayerPayments.Add(new PlayerPayment { Id = 1, UserId = 1, SessionPlayerId = 1, AmountDue = 50m, PaidStatus = PaymentStatus.NotPaid });
         await db.SaveChangesAsync();
 
-        await CreateService(user, db).TriggerUnpaidReminderAsync(1);
+        var result = await CreateService(user, db).TriggerUnpaidReminderAsync(1);
 
+        Assert.True(result);
         _repoMock.Verify(r => r.AddAsync(It.Is<Notification>(n =>
             n.Type == NotificationType.UnpaidReminder && n.SessionId == 1)), Times.Once);
         _repoMock.Verify(r => r.SaveChangesAsync(), Times.Once);

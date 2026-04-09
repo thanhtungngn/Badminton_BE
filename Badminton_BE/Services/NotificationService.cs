@@ -76,22 +76,21 @@ namespace Badminton_BE.Services
             await _repo.SaveChangesAsync();
         }
 
-        public async Task TriggerUnpaidReminderAsync(int sessionId)
+        public async Task<bool> TriggerUnpaidReminderAsync(int sessionId)
         {
-            if (!_currentUser.UserId.HasValue) return;
+            if (!_currentUser.UserId.HasValue) return false;
 
-            if (await _repo.ExistsTodayAsync(sessionId, NotificationType.UnpaidReminder)) return;
+            if (await _repo.ExistsTodayAsync(sessionId, NotificationType.UnpaidReminder)) return false;
 
             var session = await _db.Sessions.FirstOrDefaultAsync(s => s.Id == sessionId);
-            if (session == null) return;
+            if (session == null) return false;
 
             var unpaidCount = await _db.PlayerPayments
-                .Include(pp => pp.SessionPlayer)
                 .CountAsync(pp => pp.SessionPlayer != null &&
                                   pp.SessionPlayer.SessionId == sessionId &&
                                   pp.PaidStatus != PaymentStatus.Paid);
 
-            if (unpaidCount == 0) return;
+            if (unpaidCount == 0) return false;
 
             var payload = JsonSerializer.Serialize(new
             {
@@ -107,6 +106,7 @@ namespace Badminton_BE.Services
                 Payload = payload
             });
             await _repo.SaveChangesAsync();
+            return true;
         }
     }
 }

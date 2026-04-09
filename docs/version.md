@@ -1,7 +1,41 @@
 # Version History
 
-## v1.1.7 — BCM-110: Two-step payment confirmation (Pending + Approve)
+## v1.1.7 — BCM-105: Notification system review feedback applied
 > Branch: `feature/BCM-105`
+
+### Fixed — Notification system correctness
+- `TriggerUnpaidReminderAsync` now returns `Task<bool>` — `true` when a notification was created, `false` when skipped.
+- `NotificationController.TriggerReminder` uses the bool result to accurately track `NotificationsCreated` / `Skipped` and no longer duplicates the `ExistsTodayAsync` idempotency check.
+- `NotificationService.TriggerUnpaidReminderAsync` — removed unnecessary `.Include(pp => pp.SessionPlayer)` from the unpaid-count query.
+- `PaymentService.ConfirmPlayerPaymentAsync` now returns `ConfirmPaymentResult?` (DTO + `WasTransitioned` flag) so callers can distinguish a new transition from an already-confirmed repeat call.
+- `PaymentController.ConfirmPlayerPayment` only triggers the `PaymentRecorded` notification when `WasTransitioned = true` — prevents duplicate notifications on repeat calls.
+- `TriggerPriceChangedAsync` wired into `PaymentService.SetSessionPricesAsync` — price-change notifications are now reliably created when session prices are updated.
+
+### Fixed — Documentation
+- `docs/current-state.md` (top-level) updated to fully reflect v1.1.7: version table, payment section (two-step flow + new endpoints), new Notification section, updated domain-model table.
+- `Badminton_BE/docs/current-state.md` converted to a pointer — single source of truth is `docs/current-state.md`.
+- `Badminton_BE/docs/version.md` converted to a pointer — single source of truth is `docs/version.md`.
+- `docs/agents/trello-agent.md` version-tracking guidance aligned with actual changelog process (`docs/version.md`, `docs/releases/`, `docs/current-state.md`).
+- `Badminton_BE/docs/agents/trello-agent.md` converted to a pointer.
+
+### Files
+- `Badminton_BE/Services/Interfaces/INotificationService.cs`
+- `Badminton_BE/Services/NotificationService.cs`
+- `Badminton_BE/Controllers/NotificationController.cs`
+- `Badminton_BE/Services/Interfaces/IPaymentService.cs`
+- `Badminton_BE/Services/PaymentService.cs`
+- `Badminton_BE/Controllers/PaymentController.cs`
+- `Badminton_BE/DTOs/ConfirmPaymentResult.cs` *(new)*
+- `Badminton_BE.Tests/Services/NotificationServiceTests.cs`
+- `Badminton_BE.Tests/Services/PaymentServiceTests.cs`
+- `Badminton_BE.Tests/Controllers/PaymentControllerTests.cs`
+- `Badminton_BE.Tests/Controllers/NotificationControllerTests.cs`
+- `docs/current-state.md`
+- `docs/agents/trello-agent.md`
+- `Badminton_BE/docs/current-state.md`
+- `Badminton_BE/docs/version.md`
+- `Badminton_BE/docs/agents/trello-agent.md`
+
 
 ### Changed — Payment confirmation flow
 - `PaymentStatus` enum: added `ConfirmationPending = 3`.

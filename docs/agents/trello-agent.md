@@ -16,7 +16,10 @@ When you are assigned a GitHub Issue that was created from a Trello card, your j
 - **Language & framework:** C# (.NET 10), ASP.NET Core Web API.
 - **Multi-tenancy:** Every domain table must include a `UserId` column. All data queries must filter by the authenticated user's ID. Exception: `PlayerRanking` — no `UserId` filtering.
 - **DTOs and Models:** Never define DTO or Model classes inside service classes. Always place them in their own file under `DTOs/` or `Models/`.
-- **Version tracking:** Every code change must be documented in the current version release notes file under `docs/releases/`.
+- **Version tracking:** Every code change must be documented in three places:
+    - Add a brief entry to `docs/version.md` (changelog).
+    - Create `docs/releases/vX.Y.Z.md` with the full release notes for the new patch version.
+    - Update `docs/current-state.md` if any capability, endpoint, model, or project structure changed.
 - **Naming:** Use PascalCase for C# types and members. Use camelCase in JSON responses.
 - **Architecture:** Follow the existing Repository → Service → Controller layered pattern.
 - **Database:** Use EF Core with MySQL (Pomelo). Run `dotnet ef migrations add <Name>` when schema changes are needed.
@@ -42,7 +45,8 @@ Badminton_MCP/          ← MCP server (tool extensions)
 - Title: match the Trello card title.
 - Description: summarise what was changed and reference the original issue with `Closes #<issue-number>`.
 - Include migration files if schema was changed.
-- Update `docs/releases/` with a note for the change.
+- Add a brief entry to `docs/version.md` and create `docs/releases/vX.Y.Z.md` with full release notes.
+- Update `docs/current-state.md` if any capability, endpoint, model, or project structure changed.
 
 ## Trello Card Identifier
 
