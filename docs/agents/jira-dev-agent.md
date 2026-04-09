@@ -11,6 +11,10 @@ When you are assigned a GitHub Issue created from a Jira ticket, your job is to:
 3. Implement the change following all project conventions below.
 4. Open a Pull Request targeting `master` with a clear title and description.
 
+## Terminology
+- **User** — a player who does **not** need authentication. Can access public-facing content (e.g. session registration, member lookup by contact).
+- **Owner** — a player who **requires** authentication (JWT). Manages sessions, members, payments, and notifications. All `[Authorize]` endpoints are Owner-only.
+
 ## Project Conventions
 
 - **Language & framework:** C# (.NET 10), ASP.NET Core Web API.

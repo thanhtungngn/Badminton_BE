@@ -5,6 +5,10 @@
 - Whenever code is updated in this repository, the change should be noted in the version document, not just general project documentation.
 - Do not define model or DTO classes inside service classes. Always place them in their own file in the DTOs or Models folder.
 
+## Terminology
+- **User** — a player who does **not** need authentication. Can access public-facing content (e.g. session registration, member lookup).
+- **Owner** — a player who **requires** authentication. Manages sessions, members, payments, and notifications.
+
 ## Subtask Rules
 When creating subtasks (e.g. from a Trello card or implementation plan):
 - Subtasks **inherit** the parent task's branch, labels, and workflow context — do not create a new branch per subtask.
