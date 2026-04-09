@@ -42,9 +42,11 @@ namespace Badminton_BE.Repositories
 
         public async Task MarkAllAsReadAsync()
         {
-            await _db.Notifications
-                .Where(n => !n.IsRead)
-                .ExecuteUpdateAsync(s => s.SetProperty(n => n.IsRead, true));
+            var unread = await _db.Notifications.Where(n => !n.IsRead).ToListAsync();
+            foreach (var n in unread)
+                n.IsRead = true;
+            if (unread.Count > 0)
+                await _db.SaveChangesAsync();
         }
 
         public async Task<bool> ExistsTodayAsync(int sessionId, NotificationType type)

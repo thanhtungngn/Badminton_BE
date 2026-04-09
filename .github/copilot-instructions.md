@@ -4,6 +4,7 @@
 - The user prefers multi-tenant data isolation: all domain tables should include a UserId so each authenticated user can only access their own data, except for PlayerRanking which should not have UserId filtering.
 - Whenever code is updated in this repository, the change should be noted in the version document, not just general project documentation.
 - Do not define model or DTO classes inside service classes. Always place them in their own file in the DTOs or Models folder.
+- All new controllers, services, and repositories **must** have corresponding unit tests in `Badminton_BE.Tests` before the PR is merged. Tests must maintain ≥80% line coverage across the project. Follow the existing patterns: use `Moq` for mocks, `InMemory` DB via `DbContextFactory` for repository/service tests, and mock interfaces directly for controller tests.
 
 ## Terminology
 - **User** — a player who does **not** need authentication. Can access public-facing content (e.g. session registration, member lookup).
