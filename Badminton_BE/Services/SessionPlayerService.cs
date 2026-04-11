@@ -59,6 +59,11 @@ namespace Badminton_BE.Services
             await _repo.AddAsync(sp);
             await _repo.SaveChangesAsync();
 
+            if (session.Status == SessionStatus.OnGoing)
+            {
+                await _paymentService.EnsurePlayerPaymentForSessionPlayerAsync(sp.Id);
+            }
+
             var created = await _repo.GetByIdWithIncludesAsync(sp.Id);
             if (created == null)
             {
