@@ -6,7 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>Badminton_MCP</AssemblyName>
     <RootNamespace>Badminton_MCP</RootNamespace>
-    <Version>1.1.2</Version>
+    <Version>1.1.7</Version>
   </PropertyGroup>
 
   <ItemGroup>

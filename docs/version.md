@@ -1,6 +1,126 @@
 # Version History
 
-## v1.1.4 — Remote MCP Documentation Alignment
+## v1.1.8 — BCM-105: Final Payment Verification Flow & Target Safeties
+> Branch: `feature/BCM-105`
+
+### Fixed — Notification Delivery & Session Data Protection
+- **Session Serialization Protection:** Updated `SessionWithPlayersDto` and `SessionService` to explicitly map `Title`, `Description`, and `Status`. This permanently blocks the session update endpoint from destructively saving empty strings to the database via empty mapping loops when updating session metadata.
+- **Embedded Target Deliveries:** `TriggerPaymentRecordedAsync` in `NotificationService` now strictly evaluates the embedded Host target via `session.UserId` rather than `_currentUserService.UserId`. This resolves an architecture block where fully anonymous players were erroneously restricted from emitting valid notification triggers up to the Host.
+- **Dangling Payment Cleanup:** Refined API consumption logic explicitly maps to `PaymentService.ConfirmPlayerPaymentAsync` safely without spawning unmonitored duplicate network pipelines logic.
+
+### Files
+- `Badminton_BE/DTOs/SessionWithPlayersDto.cs`
+- `Badminton_BE/Services/NotificationService.cs`
+- `Badminton_BE/Services/SessionService.cs`
+
+## v1.1.7 — BCM-105: Notification system review feedback applied
+> Branch: `feature/BCM-105`
+
+### Fixed — Notification system correctness
+- `TriggerUnpaidReminderAsync` now returns `Task<bool>` — `true` when a notification was created, `false` when skipped.
+- `NotificationController.TriggerReminder` uses the bool result to accurately track `NotificationsCreated` / `Skipped` and no longer duplicates the `ExistsTodayAsync` idempotency check.
+- `NotificationService.TriggerUnpaidReminderAsync` — removed unnecessary `.Include(pp => pp.SessionPlayer)` from the unpaid-count query.
+- `PaymentService.ConfirmPlayerPaymentAsync` now returns `ConfirmPaymentResult?` (DTO + `WasTransitioned` flag) so callers can distinguish a new transition from an already-confirmed repeat call.
+- `PaymentController.ConfirmPlayerPayment` only triggers the `PaymentRecorded` notification when `WasTransitioned = true` — prevents duplicate notifications on repeat calls.
+- `TriggerPriceChangedAsync` wired into `PaymentService.SetSessionPricesAsync` — price-change notifications are now reliably created when session prices are updated.
+
+### Fixed — Documentation
+- `docs/current-state.md` (top-level) updated to fully reflect v1.1.7: version table, payment section (two-step flow + new endpoints), new Notification section, updated domain-model table.
+- `Badminton_BE/docs/current-state.md` converted to a pointer — single source of truth is `docs/current-state.md`.
+- `Badminton_BE/docs/version.md` converted to a pointer — single source of truth is `docs/version.md`.
+- `docs/agents/trello-agent.md` version-tracking guidance aligned with actual changelog process (`docs/version.md`, `docs/releases/`, `docs/current-state.md`).
+- `Badminton_BE/docs/agents/trello-agent.md` converted to a pointer.
+
+### Files
+- `Badminton_BE/Services/Interfaces/INotificationService.cs`
+- `Badminton_BE/Services/NotificationService.cs`
+- `Badminton_BE/Controllers/NotificationController.cs`
+- `Badminton_BE/Services/Interfaces/IPaymentService.cs`
+- `Badminton_BE/Services/PaymentService.cs`
+- `Badminton_BE/Controllers/PaymentController.cs`
+- `Badminton_BE/DTOs/ConfirmPaymentResult.cs` *(new)*
+- `Badminton_BE.Tests/Services/NotificationServiceTests.cs`
+- `Badminton_BE.Tests/Services/PaymentServiceTests.cs`
+- `Badminton_BE.Tests/Controllers/PaymentControllerTests.cs`
+- `Badminton_BE.Tests/Controllers/NotificationControllerTests.cs`
+- `docs/current-state.md`
+- `docs/agents/trello-agent.md`
+- `Badminton_BE/docs/current-state.md`
+- `Badminton_BE/docs/version.md`
+- `Badminton_BE/docs/agents/trello-agent.md`
+
+
+### Changed — Payment confirmation flow
+- `PaymentStatus` enum: added `ConfirmationPending = 3`.
+- `SessionPlayerStatus` enum: added `ConfirmationPending = 4`.
+- `POST /api/payment/session-player/{id}/confirm` — now sets status to `ConfirmationPending` and triggers a `PaymentRecorded` notification to the owner. No longer marks as `Paid` directly.
+- New `POST /api/payment/session-player/{id}/approve` — owner-only step that sets `PlayerPayment.PaidStatus = Paid`, `SessionPlayer.Status = Paid`, and `PaidAt = UtcNow`.
+- EF Core migration `AddConfirmationPendingStatus` generated.
+
+### Flow
+```
+Player  → POST /confirm → status: ConfirmationPending + owner notification
+Owner   → POST /approve → status: Paid
+```
+
+### Files
+- `Badminton_BE/Models/PlayerPayment.cs`
+- `Badminton_BE/Models/SessionPlayer.cs`
+- `Badminton_BE/Services/Interfaces/IPaymentService.cs`
+- `Badminton_BE/Services/PaymentService.cs`
+- `Badminton_BE/Controllers/PaymentController.cs`
+- `Badminton_BE/Migrations/..._AddConfirmationPendingStatus.cs` *(new)*
+
+## v1.1.6
+> Branch: `feature/BCM-105`
+
+### Added — Notification System (Service + API layer)
+- **BCM-108** `INotificationService` / `NotificationService` with three trigger methods:
+  - `TriggerPriceChangedAsync` — creates a `PriceChanged` notification when session pricing is updated.
+  - `TriggerPaymentRecordedAsync` — creates a `PaymentRecorded` notification when a player payment is confirmed.
+  - `TriggerUnpaidReminderAsync` — creates an `UnpaidReminder` notification; idempotent (one per session per day).
+- **BCM-109** `INotificationRepository` / `NotificationRepository` with paged query, unread count, mark-one-read, mark-all-read, and today-exists check.
+- **BCM-109** `NotificationController` with four endpoints:
+  - `GET /api/notification?page=1&pageSize=20` — paginated notification list.
+  - `GET /api/notification/unread-count` — unread badge count.
+  - `PATCH /api/notification/{id}/read` — mark one as read.
+  - `PATCH /api/notification/read-all` — mark all as read.
+- **BCM-110** `POST /api/payment/session-player/{id}/confirm` — confirms a player's payment in full (sets `Paid` status on both `PlayerPayment` and `SessionPlayer`) and triggers a `PaymentRecorded` notification.
+- **BCM-111** `POST /api/notification/trigger-reminder` — manual trigger that processes all `OnGoing` sessions, creates `UnpaidReminder` notifications, and skips sessions already reminded today. Returns processed/created/skipped counts.
+- New DTOs: `NotificationReadDto`, `UnreadCountDto`, `NotificationPagedDto`, `TriggerReminderResultDto`.
+- Registered `INotificationRepository` and `INotificationService` in DI.
+
+### Files
+- `Badminton_BE/DTOs/NotificationDtos.cs` *(new)*
+- `Badminton_BE/Repositories/Interfaces/INotificationRepository.cs` *(new)*
+- `Badminton_BE/Repositories/NotificationRepository.cs` *(new)*
+- `Badminton_BE/Services/Interfaces/INotificationService.cs` *(new)*
+- `Badminton_BE/Services/NotificationService.cs` *(new)*
+- `Badminton_BE/Controllers/NotificationController.cs` *(new)*
+- `Badminton_BE/Services/Interfaces/IPaymentService.cs`
+- `Badminton_BE/Services/PaymentService.cs`
+- `Badminton_BE/Controllers/PaymentController.cs`
+- `Badminton_BE/Program.cs`
+
+## v1.1.5
+> Branch: `feature/BCM-105`
+
+### Added — Notification System (Data Layer)
+- New `NotificationType` enum: `PriceChanged`, `PaymentRecorded`, `UnpaidReminder` (stored as string).
+- New `Notification` model implementing `IEntity` + `IUserOwnedEntity` with fields: `UserId`, `SessionId` (nullable FK to `Session`), `Type`, `IsRead`, `Payload` (JSON string, max 2000 chars).
+- Registered `DbSet<Notification>` in `AppDbContext` with:
+  - `UserId` query filter for tenant isolation.
+  - Composite index on `(UserId, IsRead)` for unread badge queries.
+  - Composite index on `(UserId, CreatedDate)` for timeline ordering.
+  - `OnDelete(SetNull)` on `SessionId` FK so notifications survive session deletion.
+- EF Core migration `AddNotification` generated.
+
+### Files
+- `Badminton_BE/Models/Notification.cs` *(new)*
+- `Badminton_BE/Data/AppDbContext.cs`
+- `Badminton_BE/Migrations/..._AddNotification.cs` *(new)*
+
+
 > Branch: `master`
 
 ### Changed — AI/MCP Documentation

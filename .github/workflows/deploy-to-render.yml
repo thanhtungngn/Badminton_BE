@@ -18,18 +18,13 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: Restore
-        run: dotnet restore
-        working-directory: ./Badminton_BE
+        run: dotnet restore Badminton_BE.Tests/Badminton_BE.Tests.csproj
 
       - name: Build
-        run: dotnet build --configuration Release --no-restore
-        working-directory: ./Badminton_BE
+        run: dotnet build Badminton_BE.Tests/Badminton_BE.Tests.csproj --configuration Release --no-restore
 
-      - name: Run tests
-        run: |
-          if [ -d "./tests" ]; then
-            dotnet test --no-build --verbosity normal
-          fi
+      - name: Run tests with coverage (≥80% line coverage required)
+        run: dotnet test Badminton_BE.Tests/Badminton_BE.Tests.csproj --configuration Release --no-restore /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura /p:Threshold=80 /p:ThresholdType=line /p:ThresholdStat=total --verbosity normal
 
   deploy:
     needs: build

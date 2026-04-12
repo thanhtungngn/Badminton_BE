@@ -1,4 +1,4 @@
-# Badminton Project — Current State (v1.1.4)
+# Badminton Project — Current State (v1.1.7)
 
 ## Solution Overview
 
@@ -6,7 +6,7 @@ The solution (`Badminton_BE.slnx`) contains three projects:
 
 | Project | Type | Version | Purpose |
 |---------|------|---------|---------|
-| `Badminton_BE` | ASP.NET Core Web API | 1.1.2 | Core backend — sessions, members, payments, rankings |
+| `Badminton_BE` | ASP.NET Core Web API | 1.1.7 | Core backend — sessions, members, payments, rankings, notifications |
 | `Badminton_MCP` | ASP.NET Core Web (legacy/local MCP server) | 1.1.2 | Legacy local MCP implementation; not used in the current AI workflow |
 | `Badminton_MCP.Tests` | xUnit Test Project | — | Legacy tests for the local MCP server |
 
@@ -138,19 +138,30 @@ Endpoints:
 Handled by `PaymentController` and `PaymentService`.
 
 Capabilities:
-- Set session pricing for male/female players
+- Set session pricing for male/female players (triggers `PriceChanged` notification)
 - Pay by `sessionPlayerId`
 - Update payment amount
 - Auto-create player payments when needed
+- Player self-confirms payment (sets `ConfirmationPending` status, triggers `PaymentRecorded` notification)
+- Owner approves pending payment (sets `Paid` status)
 
 Endpoints:
 - `POST /api/payment/session/{sessionId}`
 - `POST /api/payment/session-player/{sessionPlayerId}/pay`
+- `PUT /api/payment/session-player/{sessionPlayerId}/amount`
+- `POST /api/payment/session-player/{sessionPlayerId}/confirm` *(AllowAnonymous)*
+- `POST /api/payment/session-player/{sessionPlayerId}/approve`
 
 Payment auto-creation triggers:
 - session transitions to `OnGoing`
 - member added after session is already `OnGoing`
 - session prices set while session is `OnGoing`
+
+Two-step payment confirmation flow:
+```
+Player  → POST /confirm → status: ConfirmationPending + owner notification
+Owner   → POST /approve → status: Paid
+```
 
 ### 7. Ranking System
 Handled by ranking repositories and `PlayerRankingService`.
@@ -163,6 +174,28 @@ Capabilities:
 `PlayerRanking` fields: `EloPoint`, `MatchesPlayed`, `Wins`, `Losses`, `Draws`
 
 `PlayerRanking` is intentionally not tenant-filtered (shared across all users).
+
+### 8. Notification System
+Handled by `NotificationController`, `NotificationService`, and `NotificationRepository`.
+
+Capabilities:
+- List notifications for the authenticated user (paginated)
+- Get unread notification count (for badge)
+- Mark a single notification as read
+- Mark all notifications as read
+- Manually trigger unpaid reminders for all ongoing sessions (idempotent)
+
+Notification types:
+- `PaymentRecorded` — triggered when a player confirms payment
+- `PriceChanged` — triggered when session prices are updated
+- `UnpaidReminder` — triggered manually per ongoing session (once per day)
+
+Endpoints:
+- `GET /api/notification`
+- `GET /api/notification/unread-count`
+- `PATCH /api/notification/{id}/read`
+- `PATCH /api/notification/read-all`
+- `POST /api/notification/trigger-reminder`
 
 ### Core Domain Models
 
@@ -179,6 +212,7 @@ Capabilities:
 | `PlayerPayment` | Individual payment record per player per session |
 | `Ranking` | Ranking tier definition (e.g. Bronze, Silver, Gold) |
 | `PlayerRanking` | ELO and stats per member |
+| `Notification` | Owner notification (payment recorded, price changed, unpaid reminder) |
 | `RevokedToken` | JWT revocation store |
 
 ### Multi-Tenant Behavior

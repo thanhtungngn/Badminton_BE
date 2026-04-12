@@ -6,7 +6,8 @@ namespace Badminton_BE.Models
     {
         NotPaid = 0,
         Partial = 1,
-        Paid = 2
+        Paid = 2,
+        ConfirmationPending = 3
     }
 
     public class PlayerPayment : IEntity, IUserOwnedEntity

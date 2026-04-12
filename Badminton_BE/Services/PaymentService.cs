@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Badminton_BE.DTOs;
 using Badminton_BE.Models;
 using Badminton_BE.Repositories;
+using Badminton_BE.Services.Interfaces;
 
 namespace Badminton_BE.Services
 {
@@ -13,17 +14,20 @@ namespace Badminton_BE.Services
         private readonly IPlayerPaymentRepository _playerPaymentRepo;
         private readonly ISessionRepository _sessionRepo;
         private readonly ISessionPlayerRepository _sessionPlayerRepo;
+        private readonly INotificationService _notificationService;
 
         public PaymentService(
             ISessionPaymentRepository sessionPaymentRepo,
             IPlayerPaymentRepository playerPaymentRepo,
             ISessionRepository sessionRepo,
-            ISessionPlayerRepository sessionPlayerRepo)
+            ISessionPlayerRepository sessionPlayerRepo,
+            INotificationService notificationService)
         {
             _sessionPaymentRepo = sessionPaymentRepo;
             _playerPaymentRepo = playerPaymentRepo;
             _sessionRepo = sessionRepo;
             _sessionPlayerRepo = sessionPlayerRepo;
+            _notificationService = notificationService;
         }
 
         public async Task<SessionPayment?> SetSessionPricesAsync(int sessionId, decimal priceMale, decimal priceFemale)
@@ -44,6 +48,7 @@ namespace Badminton_BE.Services
                     await GeneratePlayerPaymentsForSessionAsync(sessionId);
                 }
 
+                await _notificationService.TriggerPriceChangedAsync(sessionId, priceMale, priceFemale);
                 return existing;
             }
 
@@ -62,6 +67,7 @@ namespace Badminton_BE.Services
                 await GeneratePlayerPaymentsForSessionAsync(sessionId);
             }
 
+            await _notificationService.TriggerPriceChangedAsync(sessionId, priceMale, priceFemale);
             return sp;
         }
 
@@ -208,6 +214,69 @@ namespace Badminton_BE.Services
             {
                 pp.PaidStatus = PaymentStatus.Partial;
             }
+
+            _playerPaymentRepo.Update(pp);
+            await _playerPaymentRepo.SaveChangesAsync();
+
+            return new PlayerPaymentReadDto
+            {
+                Id = pp.Id,
+                SessionPlayerId = pp.SessionPlayerId,
+                AmountDue = pp.AmountDue,
+                AmountPaid = pp.AmountPaid,
+                PaidStatus = pp.PaidStatus.ToString(),
+                PaidAt = pp.PaidAt
+            };
+        }
+
+        public async Task<ConfirmPaymentResult?> ConfirmPlayerPaymentAsync(int sessionPlayerId)
+        {
+            var pp = await _playerPaymentRepo.GetBySessionPlayerIdAsync(sessionPlayerId);
+            if (pp == null) return null;
+
+            if (pp.PaidStatus == PaymentStatus.Paid || pp.PaidStatus == PaymentStatus.ConfirmationPending)
+                return new ConfirmPaymentResult(new PlayerPaymentReadDto
+                {
+                    Id = pp.Id,
+                    SessionPlayerId = pp.SessionPlayerId,
+                    AmountDue = pp.AmountDue,
+                    AmountPaid = pp.AmountPaid,
+                    PaidStatus = pp.PaidStatus.ToString(),
+                    PaidAt = pp.PaidAt
+                }, WasTransitioned: false);
+
+            pp.PaidStatus = PaymentStatus.ConfirmationPending;
+
+            var sessionPlayer = await _sessionPlayerRepo.GetByIdWithIncludesAsync(sessionPlayerId);
+            if (sessionPlayer != null)
+                sessionPlayer.Status = SessionPlayerStatus.ConfirmationPending;
+
+            _playerPaymentRepo.Update(pp);
+            await _playerPaymentRepo.SaveChangesAsync();
+
+            return new ConfirmPaymentResult(new PlayerPaymentReadDto
+            {
+                Id = pp.Id,
+                SessionPlayerId = pp.SessionPlayerId,
+                AmountDue = pp.AmountDue,
+                AmountPaid = pp.AmountPaid,
+                PaidStatus = pp.PaidStatus.ToString(),
+                PaidAt = pp.PaidAt
+            }, WasTransitioned: true);
+        }
+
+        public async Task<PlayerPaymentReadDto?> ApprovePlayerPaymentAsync(int sessionPlayerId)
+        {
+            var pp = await _playerPaymentRepo.GetBySessionPlayerIdAsync(sessionPlayerId);
+            if (pp == null) return null;
+
+            pp.AmountPaid = pp.AmountDue;
+            pp.PaidStatus = PaymentStatus.Paid;
+            pp.PaidAt = System.DateTime.UtcNow;
+
+            var sessionPlayer = await _sessionPlayerRepo.GetByIdWithIncludesAsync(sessionPlayerId);
+            if (sessionPlayer != null)
+                sessionPlayer.Status = SessionPlayerStatus.Paid;
 
             _playerPaymentRepo.Update(pp);
             await _playerPaymentRepo.SaveChangesAsync();
