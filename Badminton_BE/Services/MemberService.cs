@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Badminton_BE.DTOs;
@@ -40,6 +40,17 @@ namespace Badminton_BE.Services
 
         public async Task<MemberReadDto> CreateMemberAsync(MemberCreateDto dto)
         {
+            // Check if any contact value already exists in any host's list
+            Member? existingDataMember = null;
+            if (dto.Contacts != null && dto.Contacts.Any())
+            {
+                foreach (var c in dto.Contacts)
+                {
+                    existingDataMember = await _repo.GetByContactValueIgnoreFiltersAsync(c.ContactValue);
+                    if (existingDataMember != null) break;
+                }
+            }
+
             var member = new Member
             {
                 Name = dto.Name,
@@ -48,6 +59,15 @@ namespace Badminton_BE.Services
                 JoinDate = dto.JoinDate,
                 Avatar = dto.Avatar
             };
+
+            // If we found existing data and the DTO didn't specify certain fields, use the existing ones
+            if (existingDataMember != null)
+            {
+                if (string.IsNullOrWhiteSpace(member.Name)) member.Name = existingDataMember.Name;
+                if (member.Gender == 0) member.Gender = existingDataMember.Gender;
+                if (member.Level == MemberLevel.Newbie) member.Level = existingDataMember.Level;
+                if (string.IsNullOrWhiteSpace(member.Avatar)) member.Avatar = existingDataMember.Avatar;
+            }
 
             if (dto.Contacts != null)
             {
@@ -118,47 +138,106 @@ namespace Badminton_BE.Services
 
         public async Task<MemberLookupDto?> GetMemberLookupByContactAsync(string contactValue)
         {
+            if (string.IsNullOrWhiteSpace(contactValue)) return null;
             var normalizedContactValue = contactValue.Trim();
 
-            var member = await _repo.GetByContactValueIgnoreFiltersAsync(normalizedContactValue);
+            // Find ALL member records with this contact value across all hosts
+            var members = (await _repo.GetAllByContactValueIgnoreFiltersAsync(normalizedContactValue)).ToList();
 
-            if (member == null)
+            if (!members.Any())
             {
+                // Fallback: Check if this is a registered user who hasn't been added to any sessions yet
+                var user = await _userRepo.GetByPhoneNumberAsync(normalizedContactValue);
+                if (user != null)
+                {
+                    return new MemberLookupDto
+                    {
+                        Name = user.Name ?? user.Username,
+                        ContactValue = normalizedContactValue,
+                        Level = MemberLevel.Newbie.ToString(),
+                        Wins = 0,
+                        Losses = 0,
+                        Draws = 0,
+                        WinRate = 0,
+                        Sessions = new List<MemberLookupSessionDto>(),
+                        UnpaidByUser = new List<UnpaidSessionsByOwnerDto>()
+                    };
+                }
                 return null;
             }
 
-            var matchedContactValue = member.Contacts
+            // Use the primary member record for basic display info (Name, Level, etc.)
+            // Prefer one that has more sessions or is recently updated
+            var primaryMember = members.OrderByDescending(m => m.SessionPlayers.Count)
+                                       .ThenByDescending(m => m.UpdatedDate ?? m.CreatedDate)
+                                       .First();
+
+            var matchedContactValue = primaryMember.Contacts
                 .Where(c => c.ContactValue == normalizedContactValue)
                 .OrderByDescending(c => c.IsPrimary)
                 .Select(c => c.ContactValue)
                 .FirstOrDefault() ?? normalizedContactValue;
 
-            var ranking = await _playerRankingRepo.GetByMemberIdWithRankingAsync(member.Id);
-            var sessionPlayers = (await _sessionPlayerRepo.GetByMemberIdWithSessionAsync(member.Id)).ToList();
-            var payments = (await _playerPaymentRepo.GetBySessionPlayerIdsAsync(sessionPlayers.Select(sp => sp.Id)))
+            // Aggregate sessions and rankings from all matching member records
+            var allSessionPlayers = new List<SessionPlayer>();
+            foreach (var m in members)
+            {
+                var sps = await _sessionPlayerRepo.GetByMemberIdWithSessionAsync(m.Id);
+                allSessionPlayers.AddRange(sps);
+            }
+
+            var sessionPlayerIds = allSessionPlayers.Select(sp => sp.Id).ToList();
+            var payments = (await _playerPaymentRepo.GetBySessionPlayerIdsAsync(sessionPlayerIds))
                 .ToDictionary(p => p.SessionPlayerId);
 
-            var allSessionDtos = sessionPlayers
+            var allSessionDtos = allSessionPlayers
                 .Where(sp => sp.Session != null)
+                .OrderByDescending(sp => sp.Session!.StartTime)
                 .Select(sp => MapToLookupSessionDto(sp, payments))
                 .ToList();
 
-            var lookupStats = await BuildMatchStatsAsync(member.Id);
+            // Aggregate Match Stats
+            var totalWins = 0;
+            var totalLosses = 0;
+            var totalDraws = 0;
+            var totalMatches = 0;
+
+            foreach (var m in members)
+            {
+                var stats = await BuildMatchStatsAsync(m.Id);
+                totalWins += stats.Wins;
+                totalLosses += stats.Losses;
+                totalDraws += stats.Draws;
+                
+                // Recalculate matches from stats to be accurate
+                var mTotal = stats.Wins + stats.Losses + stats.Draws;
+                totalMatches += mTotal;
+            }
+
+            var winRate = totalMatches > 0 ? decimal.Round(totalWins * 100m / totalMatches, 2) : 0m;
+
+            // Get Ranking (highest one found)
+            var ranking = members
+                .Select(m => m.PlayerRanking)
+                .Where(pr => pr != null)
+                .OrderByDescending(pr => pr.EloPoint)
+                .FirstOrDefault();
 
             return new MemberLookupDto
             {
-                MemberId = member.Id,
-                Name = member.Name,
+                MemberId = primaryMember.Id,
+                Name = primaryMember.Name,
+                Nickname = primaryMember.Nickname,
                 ContactValue = matchedContactValue,
-                Level = member.Level.ToString(),
+                Level = primaryMember.Level.ToString(),
                 EloPoint = ranking?.EloPoint,
                 RankingName = ranking?.Ranking?.Name,
-                Wins = lookupStats.Wins,
-                Losses = lookupStats.Losses,
-                Draws = lookupStats.Draws,
-                WinRate = lookupStats.WinRate,
+                Wins = totalWins,
+                Losses = totalLosses,
+                Draws = totalDraws,
+                WinRate = winRate,
                 Sessions = allSessionDtos,
-                UnpaidByUser = await BuildUnpaidByUserAsync(sessionPlayers, payments)
+                UnpaidByUser = await BuildUnpaidByUserAsync(allSessionPlayers, payments)
             };
         }
 
@@ -195,6 +274,18 @@ namespace Badminton_BE.Services
             return true;
         }
 
+        public async Task<bool> UpdateNicknameAsync(int id, string? nickname)
+        {
+            var member = await _repo.GetByIdAsync(id);
+            if (member == null) return false;
+
+            member.Nickname = nickname?.Trim();
+            member.UpdatedDate = DateTime.UtcNow;
+            _repo.Update(member);
+            await _repo.SaveChangesAsync();
+            return true;
+        }
+
         public async Task<bool> DeleteMemberAsync(int id)
         {
             var existing = await _repo.GetByIdWithContactsAsync(id);
@@ -211,6 +302,7 @@ namespace Badminton_BE.Services
             {
                 Id = m.Id,
                 Name = m.Name,
+                Nickname = m.Nickname,
                 Gender = m.Gender,
                 Level = m.Level,
                 JoinDate = m.JoinDate,

@@ -372,3 +372,5 @@ trello.runsettings
 # Local MCP config - contains real credentials
 .mcp.json
 mcp.json
+Badminton_BE/appsettings.json
+Badminton_BE/appsettings.json

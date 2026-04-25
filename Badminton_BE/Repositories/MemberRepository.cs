@@ -37,11 +37,18 @@ namespace Badminton_BE.Repositories
                 return null;
             }
 
-            var normalizedContactValue = contactValue.Trim();
+            var normalizedSearch = contactValue.Trim().Replace(" ", "");
+            var altSearch = normalizedSearch.StartsWith("+84") 
+                ? "0" + normalizedSearch.Substring(3) 
+                : (normalizedSearch.StartsWith("0") ? "+84" + normalizedSearch.Substring(1) : normalizedSearch);
 
             return await _db.Members
                 .Include(m => m.Contacts)
-                .Where(m => m.Contacts.Any(c => c.ContactValue == normalizedContactValue || c.ContactValue.Trim() == normalizedContactValue))
+                .Where(m => m.Contacts.Any(c => 
+                    c.ContactValue == normalizedSearch || 
+                    c.ContactValue == altSearch ||
+                    c.ContactValue.Trim() == normalizedSearch ||
+                    c.ContactValue.Trim() == altSearch))
                 .FirstOrDefaultAsync();
         }
 
@@ -52,12 +59,19 @@ namespace Badminton_BE.Repositories
                 return null;
             }
 
-            var normalizedContactValue = contactValue.Trim();
+            var normalizedSearch = contactValue.Trim().Replace(" ", "");
+            var altSearch = normalizedSearch.StartsWith("+84") 
+                ? "0" + normalizedSearch.Substring(3) 
+                : (normalizedSearch.StartsWith("0") ? "+84" + normalizedSearch.Substring(1) : normalizedSearch);
 
             var memberId = await _db.Contacts
                 .IgnoreQueryFilters()
                 .AsNoTracking()
-                .Where(c => c.ContactValue == normalizedContactValue || c.ContactValue.Trim() == normalizedContactValue)
+                .Where(c => 
+                    c.ContactValue == normalizedSearch || 
+                    c.ContactValue == altSearch ||
+                    c.ContactValue.Trim() == normalizedSearch ||
+                    c.ContactValue.Trim() == altSearch)
                 .OrderByDescending(c => c.IsPrimary)
                 .Select(c => (int?)c.MemberId)
                 .FirstOrDefaultAsync();
@@ -70,8 +84,45 @@ namespace Badminton_BE.Repositories
             return await _db.Members
                 .IgnoreQueryFilters()
                 .Include(m => m.Contacts)
-                .AsNoTracking()
                 .FirstOrDefaultAsync(m => m.Id == memberId.Value);
+        }
+
+        public async Task<IEnumerable<Member>> GetAllByContactValueIgnoreFiltersAsync(string contactValue)
+        {
+            if (string.IsNullOrWhiteSpace(contactValue))
+            {
+                return Enumerable.Empty<Member>();
+            }
+
+            var normalizedSearch = contactValue.Trim().Replace(" ", "");
+            var altSearch = normalizedSearch.StartsWith("+84") 
+                ? "0" + normalizedSearch.Substring(3) 
+                : (normalizedSearch.StartsWith("0") ? "+84" + normalizedSearch.Substring(1) : normalizedSearch);
+
+            var memberIds = await _db.Contacts
+                .IgnoreQueryFilters()
+                .AsNoTracking()
+                .Where(c => 
+                    c.ContactValue == normalizedSearch || 
+                    c.ContactValue == altSearch ||
+                    c.ContactValue.Trim() == normalizedSearch ||
+                    c.ContactValue.Trim() == altSearch)
+                .Select(c => c.MemberId)
+                .Distinct()
+                .ToListAsync();
+
+            if (!memberIds.Any())
+            {
+                return Enumerable.Empty<Member>();
+            }
+
+            return await _db.Members
+                .IgnoreQueryFilters()
+                .Include(m => m.Contacts)
+                .Include(m => m.PlayerRanking)
+                    .ThenInclude(pr => pr.Ranking)
+                .Where(m => memberIds.Contains(m.Id))
+                .ToListAsync();
         }
 
         public async Task<Member?> GetByPhoneNumberForUserIgnoreFiltersAsync(int userId, string phoneNumber)

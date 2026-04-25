@@ -198,6 +198,24 @@ namespace Badminton_BE.Services
             }).ToList();
         }
 
+        public async Task<IEnumerable<SessionReadDto>> GetParticipantSessionsAsync(string phoneNumber)
+        {
+            var sessions = await _repo.GetByParticipantPhoneNumberAsync(phoneNumber);
+            return sessions.Select(s => new SessionReadDto
+            {
+                Id = s.Id,
+                Title = s.Title,
+                Description = s.Description,
+                StartTime = s.StartTime,
+                EndTime = s.EndTime,
+                Address = s.Address,
+                Status = s.Status,
+                NumberOfCourts = s.NumberOfCourts,
+                MaxPlayerPerCourt = s.MaxPlayerPerCourt,
+                RegisteredPlayers = s.SessionPlayers != null ? s.SessionPlayers.Count : 0
+            }).ToList();
+        }
+
         public async Task<SessionReadDto?> GetSessionByIdAsync(int id)
         {
             var s = await _repo.GetByIdAsync(id);

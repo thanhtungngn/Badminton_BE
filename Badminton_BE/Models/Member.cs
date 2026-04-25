@@ -29,6 +29,7 @@ namespace Badminton_BE.Models
         public int UserId { get; set; }
 
         public string Name { get; set; } = string.Empty;
+        public string? Nickname { get; set; }
         public Gender Gender { get; set; }
         public MemberLevel Level { get; set; } = MemberLevel.Newbie;
         public DateTime JoinDate { get; set; }

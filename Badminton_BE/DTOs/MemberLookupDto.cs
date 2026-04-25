@@ -7,6 +7,7 @@ namespace Badminton_BE.DTOs
     {
         public int MemberId { get; set; }
         public string Name { get; set; } = string.Empty;
+        public string? Nickname { get; set; }
         public string ContactValue { get; set; } = string.Empty;
         public string Level { get; set; } = string.Empty;
         public int? EloPoint { get; set; }

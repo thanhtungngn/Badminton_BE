@@ -12,6 +12,7 @@ namespace Badminton_BE.DTOs
         public MemberLevel Level { get; set; }
         public DateTime JoinDate { get; set; }
         public string? Avatar { get; set; }
+        public string? Nickname { get; set; }
         public DateTime CreatedDate { get; set; }
         public DateTime? UpdatedDate { get; set; }
         public List<ContactReadDto> Contacts { get; set; } = new List<ContactReadDto>();

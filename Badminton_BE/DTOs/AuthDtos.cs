@@ -23,10 +23,18 @@ namespace Badminton_BE.DTOs
         public string Password { get; set; } = string.Empty;
     }
 
+    public class NumberLoginRequestDto
+    {
+        [Required]
+        public string ContactValue { get; set; } = string.Empty;
+    }
+
     public class AuthResponseDto
     {
         public string Token { get; set; } = string.Empty;
         public DateTime ExpiresAt { get; set; }
         public string Username { get; set; } = string.Empty;
+        public string? Name { get; set; }
+        public bool IsPlayer { get; set; }
     }
 }

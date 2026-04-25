@@ -9,5 +9,6 @@ namespace Badminton_BE.Repositories.Interfaces
     {
         Task<IEnumerable<Session>> GetByDateRangeAsync(DateTime start, DateTime end);
         Task<Session?> GetByIdWithPlayersAsync(int id);
+        Task<IEnumerable<Session>> GetByParticipantPhoneNumberAsync(string phoneNumber);
     }
 }

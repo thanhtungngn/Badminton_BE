@@ -15,13 +15,19 @@ namespace Badminton_BE.Services
     public class AuthService : IAuthService
     {
         private readonly IUserRepository _userRepository;
+        private readonly IMemberRepository _memberRepository;
         private readonly IRevokedTokenRepository _revokedTokenRepository;
         private readonly JwtOptions _jwtOptions;
         private readonly PasswordHasher<AppUser> _passwordHasher;
 
-        public AuthService(IUserRepository userRepository, IRevokedTokenRepository revokedTokenRepository, IOptions<JwtOptions> jwtOptions)
+        public AuthService(
+            IUserRepository userRepository, 
+            IMemberRepository memberRepository,
+            IRevokedTokenRepository revokedTokenRepository, 
+            IOptions<JwtOptions> jwtOptions)
         {
             _userRepository = userRepository;
+            _memberRepository = memberRepository;
             _revokedTokenRepository = revokedTokenRepository;
             _jwtOptions = jwtOptions.Value;
             _passwordHasher = new PasswordHasher<AppUser>();
@@ -151,7 +157,9 @@ namespace Badminton_BE.Services
             {
                 Token = new JwtSecurityTokenHandler().WriteToken(token),
                 ExpiresAt = expiresAt,
-                Username = user.Username
+                Username = user.Username,
+                Name = user.Name,
+                IsPlayer = user.Username.StartsWith("phone_")
             };
         }
 

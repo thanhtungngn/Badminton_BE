@@ -126,5 +126,30 @@ namespace Badminton_BE.Controllers
             if (!deleted) return NotFound();
             return NoContent();
         }
+        [AllowAnonymous]
+        [HttpPatch("{id}/nickname")]
+        [SwaggerResponse(StatusCodes.Status204NoContent, "Nickname updated")]
+        [SwaggerResponse(StatusCodes.Status404NotFound, "Member not found")]
+        public async Task<IActionResult> UpdateNickname(int id, [FromBody] NicknameUpdateDto dto)
+        {
+            var updated = await _service.UpdateNicknameAsync(id, dto.Nickname);
+            if (!updated) return NotFound();
+            return NoContent();
+        }
+
+        /// <summary>
+        /// Look up a member's profile by id (public).
+        /// </summary>
+        /// <param name="memberId">Member identifier.</param>
+        [AllowAnonymous]
+        [HttpGet("lookup-id")]
+        [SwaggerResponse(StatusCodes.Status200OK, "Member found", typeof(MemberLookupDto))]
+        [SwaggerResponse(StatusCodes.Status404NotFound, "Member not found")]
+        public async Task<IActionResult> LookupById([FromQuery] int memberId)
+        {
+            var result = await _service.GetMemberByIdForLookupAsync(memberId);
+            if (result == null) return NotFound();
+            return Ok(result);
+        }
     }
 }
