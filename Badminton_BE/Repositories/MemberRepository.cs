@@ -21,6 +21,28 @@ namespace Badminton_BE.Repositories
                 .ToListAsync();
         }
 
+        /// <summary>
+        /// Get all members who have participated in at least one session owned by the given host.
+        /// </summary>
+        public async Task<IEnumerable<Member>> GetAllForHostAsync(int hostUserId)
+        {
+            // Find all member IDs that have a SessionPlayer entry in a session owned by this host
+            var memberIds = await _db.SessionPlayers
+                .IgnoreQueryFilters()
+                .Where(sp => sp.UserId == hostUserId)
+                .Select(sp => sp.MemberId)
+                .Distinct()
+                .ToListAsync();
+
+            return await _db.Members
+                .Include(m => m.Contacts)
+                .Include(m => m.PlayerRanking)
+                    .ThenInclude(pr => pr.Ranking)
+                .Where(m => memberIds.Contains(m.Id))
+                .AsNoTracking()
+                .ToListAsync();
+        }
+
         public async Task<Member?> GetByIdWithContactsAsync(int id)
         {
             return await _db.Members
@@ -86,8 +108,7 @@ namespace Badminton_BE.Repositories
             var memberId = await _db.Contacts
                 .IgnoreQueryFilters()
                 .AsNoTracking()
-                .Where(c => c.UserId == userId
-                    && c.ContactType == ContactType.Phone
+                .Where(c => c.ContactType == ContactType.Phone
                     && (c.ContactValue == normalizedPhoneNumber || c.ContactValue.Trim() == normalizedPhoneNumber))
                 .OrderByDescending(c => c.IsPrimary)
                 .Select(c => (int?)c.MemberId)
@@ -99,11 +120,10 @@ namespace Badminton_BE.Repositories
             }
 
             return await _db.Members
-                .IgnoreQueryFilters()
                 .Include(m => m.Contacts)
                 .Include(m => m.PlayerRanking)
                 .AsNoTracking()
-                .FirstOrDefaultAsync(m => m.Id == memberId.Value && m.UserId == userId);
+                .FirstOrDefaultAsync(m => m.Id == memberId.Value);
         }
 
         public async Task<IEnumerable<Member>> GetMembersWithoutPlayerRankingAsync()

@@ -40,6 +40,27 @@ namespace Badminton_BE.Services
 
         public async Task<MemberReadDto> CreateMemberAsync(MemberCreateDto dto)
         {
+            // --- Dedup check: look for an existing member with the same contact value ---
+            if (dto.Contacts != null && dto.Contacts.Any())
+            {
+                foreach (var c in dto.Contacts)
+                {
+                    var existing = await _repo.GetByContactValueIgnoreFiltersAsync(c.ContactValue.Trim());
+                    if (existing != null)
+                    {
+                        // Member already exists globally — return it instead of creating a duplicate.
+                        // Optionally update name/level if different (host may have newer info).
+                        var existingDto = MapToReadDto(existing);
+                        var stats = await BuildMatchStatsAsync(existing.Id, _currentUserService.UserId);
+                        existingDto.Wins = stats.Wins;
+                        existingDto.Losses = stats.Losses;
+                        existingDto.Draws = stats.Draws;
+                        existingDto.WinRate = stats.WinRate;
+                        return existingDto;
+                    }
+                }
+            }
+
             var member = new Member
             {
                 Name = dto.Name,
@@ -71,7 +92,12 @@ namespace Badminton_BE.Services
 
         public async Task<IEnumerable<MemberReadDto>> GetMembersAsync()
         {
-            var members = await _repo.GetAllWithContactsAsync();
+            var hostUserId = _currentUserService.UserId;
+            // If host is authenticated, only show members who have played in their sessions
+            var members = hostUserId.HasValue
+                ? await _repo.GetAllForHostAsync(hostUserId.Value)
+                : await _repo.GetAllWithContactsAsync();
+
             var dtos = new List<MemberReadDto>();
             foreach (var m in members)
             {
@@ -172,8 +198,17 @@ namespace Badminton_BE.Services
             var payments = (await _playerPaymentRepo.GetBySessionPlayerIdsAsync(sessionPlayers.Select(sp => sp.Id)))
                 .ToDictionary(p => p.SessionPlayerId);
 
+            // Look up host names for each unique UserId
+            var hostUserIds = sessionPlayers.Select(sp => sp.Session!.UserId).Distinct().ToList();
+            var hostUsers = new Dictionary<int, string>();
+            foreach (var uid in hostUserIds)
+            {
+                var user = await _userRepo.GetByIdAsync(uid);
+                hostUsers[uid] = user?.Name ?? user?.Username ?? "Unknown";
+            }
+
             return sessionPlayers
-                .Select(sp => MapToLookupSessionDto(sp, payments))
+                .Select(sp => MapToLookupSessionDto(sp, payments, hostUsers))
                 .OrderByDescending(s => s.StartTime)
                 .ToList();
         }
@@ -327,7 +362,7 @@ namespace Badminton_BE.Services
             return unpaidByUser;
         }
 
-        private static MemberLookupSessionDto MapToLookupSessionDto(SessionPlayer sessionPlayer, Dictionary<int, PlayerPayment> payments)
+        private static MemberLookupSessionDto MapToLookupSessionDto(SessionPlayer sessionPlayer, Dictionary<int, PlayerPayment> payments, Dictionary<int, string>? hostUsers = null)
         {
             payments.TryGetValue(sessionPlayer.Id, out var payment);
 
@@ -344,7 +379,8 @@ namespace Badminton_BE.Services
                 PaymentStatus = payment?.PaidStatus.ToString() ?? PaymentStatus.NotPaid.ToString(),
                 AmountDue = payment?.AmountDue,
                 AmountPaid = payment?.AmountPaid,
-                PaidAt = payment?.PaidAt
+                PaidAt = payment?.PaidAt,
+                HostName = hostUsers != null && hostUsers.TryGetValue(sessionPlayer.Session.UserId, out var name) ? name : string.Empty
             };
         }
     }

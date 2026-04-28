@@ -8,6 +8,7 @@ namespace Badminton_BE.Repositories.Interfaces
     {
         Task<Member?> GetByIdWithContactsAsync(int id);
         Task<IEnumerable<Member>> GetAllWithContactsAsync();
+        Task<IEnumerable<Member>> GetAllForHostAsync(int hostUserId);
         Task<Member?> GetByContactValueAsync(string contactValue);
         Task<Member?> GetByContactValueIgnoreFiltersAsync(string contactValue);
         Task<Member?> GetByPhoneNumberForUserIgnoreFiltersAsync(int userId, string phoneNumber);

@@ -33,6 +33,7 @@ namespace Badminton_BE.DTOs
         public decimal? AmountDue { get; set; }
         public decimal? AmountPaid { get; set; }
         public DateTime? PaidAt { get; set; }
+        public string HostName { get; set; } = string.Empty;
     }
 
     public class UnpaidSessionsByOwnerDto

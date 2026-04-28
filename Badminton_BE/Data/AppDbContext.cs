@@ -107,7 +107,8 @@ namespace Badminton_BE.Data
                     .HasForeignKey<PlayerRanking>(pr => pr.MemberId)
                     .OnDelete(DeleteBehavior.Cascade);
 
-                b.HasQueryFilter(m => !HasCurrentUserId || m.UserId == CurrentUserIdOrDefault);
+                // No query filter — members are shared globally across hosts.
+                // Host-scoped views are handled at the service/query level.
             });
 
             modelBuilder.Entity<Ranking>(b =>
@@ -183,7 +184,7 @@ namespace Badminton_BE.Data
                 b.Property(c => c.ContactType).HasConversion<string>().IsRequired();
                 b.Property(c => c.ContactValue).IsRequired().HasMaxLength(500);
                 b.Property(c => c.IsPrimary).IsRequired();
-                b.HasQueryFilter(c => !HasCurrentUserId || c.UserId == CurrentUserIdOrDefault);
+                // No query filter — contacts follow the member (shared globally).
             });
 
             modelBuilder.Entity<SessionPlayer>(b =>
