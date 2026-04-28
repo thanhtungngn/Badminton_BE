@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Badminton_BE.DTOs;
@@ -160,6 +160,22 @@ namespace Badminton_BE.Services
                 Sessions = allSessionDtos,
                 UnpaidByUser = await BuildUnpaidByUserAsync(sessionPlayers, payments)
             };
+        }
+
+        public async Task<List<MemberLookupSessionDto>> GetMemberSessionsAsync(int memberId, int? ownerUserId = null)
+        {
+            var sessionPlayers = (await _sessionPlayerRepo.GetByMemberIdWithSessionAsync(memberId))
+                .Where(sp => sp.Session != null)
+                .Where(sp => !ownerUserId.HasValue || sp.Session!.UserId == ownerUserId.Value)
+                .ToList();
+
+            var payments = (await _playerPaymentRepo.GetBySessionPlayerIdsAsync(sessionPlayers.Select(sp => sp.Id)))
+                .ToDictionary(p => p.SessionPlayerId);
+
+            return sessionPlayers
+                .Select(sp => MapToLookupSessionDto(sp, payments))
+                .OrderByDescending(s => s.StartTime)
+                .ToList();
         }
 
         public async Task<bool> UpdateMemberAsync(int id, MemberUpdateDto dto)
